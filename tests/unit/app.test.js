@@ -42,7 +42,7 @@ global.BrokerageData = {
 };
 
 // Load app.js
-const appCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/app.js', 'utf8');
+const appCode = fs.readFileSync('js/app.js', 'utf8');
 eval(appCode + `
   global.getState = () => state;
   global.getMockData = () => mockData;

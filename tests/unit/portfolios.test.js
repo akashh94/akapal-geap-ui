@@ -68,13 +68,13 @@ global.renderHoldingSection = () => 'Holding Section';
 global.renderDisclosures = () => 'Disclosures';
 
 // Load JS codes
-const appCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/app.js', 'utf8');
+const appCode = fs.readFileSync('js/app.js', 'utf8');
 eval(appCode + '\nglobal.getState = () => state;');
 
-const portfoliosCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/portfolios.js', 'utf8');
+const portfoliosCode = fs.readFileSync('js/portfolios.js', 'utf8');
 eval(portfoliosCode + '\nglobal.renderPortfolios = renderPortfolios;\nglobal.renderRiskAssessment = renderRiskAssessment;');
 
-const planningCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/planning.js', 'utf8');
+const planningCode = fs.readFileSync('js/planning.js', 'utf8');
 eval(planningCode + '\nglobal.renderPlanning = renderPlanning;');
 
 test('Portfolios Page - Tab Rendering and Risk Assessment', (t) => {

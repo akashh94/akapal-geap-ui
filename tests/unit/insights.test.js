@@ -11,7 +11,7 @@ global.document = {
 };
 
 // Load insights.js code
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/insights.js', 'utf8');
+const code = fs.readFileSync('js/insights.js', 'utf8');
 eval(code + '\nglobal.AIInsightsPage = AIInsightsPage;');
 
 test('AI Insights Hub Page - renderView', (t) => {

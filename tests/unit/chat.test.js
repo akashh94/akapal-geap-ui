@@ -92,7 +92,7 @@ global.ContextEngine = {
 };
 
 // 2. Load and execute chat.js
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/chat.js', 'utf8');
+const code = fs.readFileSync('js/chat.js', 'utf8');
 eval(code + '\nglobal.Chat = Chat;');
 
 function resetState() {

@@ -50,11 +50,11 @@ global.fetch = async (url) => {
 };
 
 // 2. Load settings.js code
-const settingsCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/settings.js', 'utf8');
+const settingsCode = fs.readFileSync('js/settings.js', 'utf8');
 eval(settingsCode);
 
 // 3. Load agents.js code to get toolImplementations
-const agentsCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/agents.js', 'utf8');
+const agentsCode = fs.readFileSync('js/agents.js', 'utf8');
 eval(agentsCode + '\nglobal.AgentManager = AgentManager;');
 
 test('AI Settings - renderAISettings() UI Structure', (t) => {

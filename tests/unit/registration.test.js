@@ -21,7 +21,7 @@ global.BrokerageData = {
 };
 
 // Load and execute agents.js
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/agents.js', 'utf8');
+const code = fs.readFileSync('js/agents.js', 'utf8');
 eval(code + '\nglobal.AgentManager = AgentManager;');
 
 test('AgentManager - Dynamic Registration & Deregistration', (t) => {

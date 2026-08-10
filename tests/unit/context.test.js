@@ -35,7 +35,7 @@ global.window = {
 };
 
 // 2. Load context.js
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/context.js', 'utf8');
+const code = fs.readFileSync('js/context.js', 'utf8');
 eval(code + '\nglobal.ContextEngine = ContextEngine;');
 
 test('ContextEngine - getContextPayload', (t) => {
