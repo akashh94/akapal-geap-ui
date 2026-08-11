@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Resolve this project's root.
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$PROJECT_ROOT"
+
+# Office environment config (self-contained): PROJECT_ID / REGION /
+# ARTIFACT_REGISTRY / GEAP_ENGINE_* / ETRADE_ENV all come from
+# deploy.office.env — the single source of truth for the office deployment.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/deploy.office.env"
+
+gcloud config set project "$PROJECT_ID"
+
+# Ensure the Artifact Registry repository exists in the deploy region.
+echo "Ensuring Artifact Registry repository '${ARTIFACT_REGISTRY}' in ${REGION}..."
+gcloud artifacts repositories describe "$ARTIFACT_REGISTRY" \
+  --location "$REGION" >/dev/null 2>&1 || {
+  echo "Repository not found; creating..."
+  gcloud artifacts repositories create "$ARTIFACT_REGISTRY" \
+    --repository-format docker \
+    --location "$REGION"
+}
+
+# Build + push the UI image to the office project's Artifact Registry.
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/akapal-geap-ui:$(git rev-parse --short HEAD)"
+echo "$IMAGE"
+gcloud builds submit . --tag "$IMAGE" --project "$PROJECT_ID"

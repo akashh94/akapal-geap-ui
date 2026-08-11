@@ -6,8 +6,15 @@ Thumbs.db
 node_modules/
 server.log
 .env
+.env.*
+!.env.example
 
 # Local screenshots
 *.jpeg
 *.jpg
 *.png
+
+# Personal build/deploy scripts and env config (personal GCP project)
+build.personal.sh
+deploy.personal.sh
+deploy.personal.env
