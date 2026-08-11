@@ -8,9 +8,9 @@ cd "$PROJECT_ROOT"
 
 # Office environment config (self-contained): PROJECT_ID / REGION /
 # ARTIFACT_REGISTRY / SERVICE_NAME / GEAP_ENGINE_* / ETRADE_ENV all come from
-# deploy.office.env — the single source of truth for the office deployment.
+# geap.deploy.env — the single source of truth for the office deployment.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/deploy.office.env"
+source "$SCRIPT_DIR/geap.deploy.env"
 
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY}/akapal-geap-ui:$(git rev-parse --short HEAD)"
 
