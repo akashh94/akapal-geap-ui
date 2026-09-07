@@ -1906,7 +1906,7 @@ window.triggerChatQuery = function (message, agentId = null) {
 
   if (typeof Chat === 'undefined') {
     if (typeof window !== 'undefined' && window.ensureScript && window.ensureStyle) {
-      window.ensureStyle('/css/chat.min.css?v=0.1.0');
+      window.ensureStyle('/css/chat.min.css?v=0.1.2');
       window.ensureScript('/js/chat.js?v=0.1.0', executeQuery);
     }
   } else {
@@ -1921,7 +1921,7 @@ chatLauncher.addEventListener("click", () => {
   if (isHidden) {
     if (typeof Chat === "undefined") {
       if (typeof window !== "undefined" && window.ensureScript && window.ensureStyle) {
-        window.ensureStyle("/css/chat.min.css?v=0.1.0");
+        window.ensureStyle("/css/chat.min.css?v=0.1.2");
         window.ensureScript("/js/chat.js?v=0.1.0", () => {
           if (typeof Chat !== "undefined") {
             Chat.init();
@@ -2139,6 +2139,15 @@ const GeapApp = {
   renderMarkdown(text) {
     if (!text) return "";
     return String(text)
+      // headings: #### … down to # …
+      .replace(/^#####\s+(.*)$/gm, '<h5>$1</h5>')
+      .replace(/^####\s+(.*)$/gm, '<h4>$1</h4>')
+      .replace(/^###\s+(.*)$/gm, '<h3>$1</h3>')
+      .replace(/^##\s+(.*)$/gm, '<h2>$1</h2>')
+      .replace(/^#\s+(.*)$/gm, '<h1>$1</h1>')
+      // task-list checkboxes
+      .replace(/^\s*[-*]\s+\[ \]\s+(.*)$/gm, '<label class="markdown-task"><input type="checkbox" disabled> $1</label>')
+      .replace(/^\s*[-*]\s+\[x\]\s+(.*)$/gm, '<label class="markdown-task"><input type="checkbox" checked disabled> $1</label>')
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
       .replace(/`(.*?)`/g, "<code>$1</code>")
@@ -2149,7 +2158,7 @@ const GeapApp = {
         }
         return `<a href="${url}" data-route>${label}</a>`;
       })
-      .replace(/\n- /g, "\n• ")
+      .replace(/\n[-*] /g, "\n• ")
       .replace(/\n/g, "<br>");
   }
 };

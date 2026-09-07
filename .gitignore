@@ -29,6 +29,11 @@ server.log
 .env*.local
 .env
 
+# Personal build/deploy scripts and env config (personal GCP project)
+build.personal.sh
+deploy.personal.sh
+deploy.personal.env
+
 # vercel
 .vercel
 
