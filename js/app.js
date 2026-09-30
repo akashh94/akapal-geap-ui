@@ -2137,7 +2137,8 @@ const GeapApp = {
 
   renderMarkdown(text) {
     if (!text) return "";
-    return String(text)
+
+    const inline = (str) => str
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
       .replace(/`(.*?)`/g, "<code>$1</code>")
@@ -2147,9 +2148,48 @@ const GeapApp = {
           return `<a href="${url}"${target}>${label}</a>`;
         }
         return `<a href="${url}" data-route>${label}</a>`;
-      })
-      .replace(/\n- /g, "\n• ")
-      .replace(/\n/g, "<br>");
+      });
+
+    const splitRow = (row) => row.trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+
+    const isSeparatorRow = (row) => {
+      if (!row.includes("|")) return false;
+      const cells = splitRow(row);
+      return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell));
+    };
+
+    const lines = String(text).split("\n");
+    let html = "";
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (line.includes("|") && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
+        const headers = splitRow(line);
+        const rows = [];
+        i += 2;
+        while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
+          rows.push(splitRow(lines[i]));
+          i++;
+        }
+        i--;
+
+        const head = headers.map((cell) => `<th>${inline(cell)}</th>`).join("");
+        const body = rows
+          .map((cells) => `<tr>${headers.map((_, c) => `<td>${inline(cells[c] || "")}</td>`).join("")}</tr>`)
+          .join("");
+        html += `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+        continue;
+      }
+
+      html += inline(line).replace(/^- /, "• ") + "<br>";
+    }
+
+    return html.replace(/<br>$/, "");
   }
 };
 

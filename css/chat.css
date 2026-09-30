@@ -210,6 +210,29 @@
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* -- Markdown tables inside messages -- */
+.message-content .table-wrap {
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.message-content table {
+  font-size: 0.75rem;
+}
+
+.message-content th,
+.message-content td {
+  border-bottom: 1px solid var(--geap-border);
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.message-content th {
+  border-bottom-width: 2px;
+  color: var(--geap-text-tertiary);
+  font-weight: 600;
+}
+
 /* -- Streaming / typing indicator -- */
 .chat-streaming {
   display: flex;

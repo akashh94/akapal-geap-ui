@@ -11,3 +11,7 @@ server.log
 *.jpeg
 *.jpg
 *.png
+
+# Personal deployment scripts (not for the shared repo)
+geap-ui-cloud_shell_build_personal.sh
+geap-ui-cloud_shell_deploy_personal.sh
