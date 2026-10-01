@@ -86,7 +86,7 @@ global.GeminiAPI = {
 global.ContextEngine = {
   getContextPayload: () => ({
     platform: { route: '/accounts', time: '', theme: 'dark' },
-    user: { name: 'Sree K.', lastLogin: '' },
+    user: { name: 'Mark Jorgensen', lastLogin: '' },
     account: { selectedId: 'core', netValue: '$0.00', buyingPower: '$0.00' },
     security: { piiRedacted: true, safetyActive: true, disclaimersActive: true }
   }),

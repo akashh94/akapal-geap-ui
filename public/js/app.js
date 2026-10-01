@@ -58,9 +58,9 @@ const state = {
 
 const mockData = {
   user: {
-    firstName: "Sree",
-    lastLogin: "Jun 04, 2026, 8:07 PM ET",
-    refreshedAt: "Jun 04, 2026, 10:19 PM ET"
+    firstName: "Mark",
+    lastLogin: "Sept 30, 2026, 8:07 PM ET",
+    refreshedAt: "Sept 30, 2026, 10:19 PM ET"
   },
   totals: {
     totalAssets: "$48,912.74",
@@ -228,7 +228,7 @@ function syncEtradeToMockData() {
       }
 
       // 1. Determine first name from live accounts (prevent "MAIN" or "CORE" default text)
-      let firstName = "Sree";
+      let firstName = "Mark";
       if (liveAccounts[0].accountName) {
         const firstWord = liveAccounts[0].accountName.split(" ")[0];
         if (firstWord !== "MAIN" && firstWord !== "CORE" && firstWord !== "E*TRADE") {
@@ -328,7 +328,7 @@ function syncEtradeToMockData() {
       }
     } else {
       mockData.user = {
-        firstName: "Sree",
+        firstName: "Mark",
         lastLogin: originalMockData.user.lastLogin,
         refreshedAt: originalMockData.user.refreshedAt
       };

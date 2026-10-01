@@ -832,7 +832,7 @@ Bloomberg economists report core CPI has moderated to 2.4% year-over-year. The F
         const reutersAllowed = allowed.reuters !== false;
 
         if (!yahooAllowed && !bloombergAllowed && !reutersAllowed) {
-          mockResponse = `I am sorry, Sree. I am unable to find any information regarding a SpaceX IPO from the allowed public or private sources configured in your AI Settings. Please check your AI Settings page to ensure all desired sources are enabled, or try a different query.`;
+          mockResponse = `I am sorry, Mark. I am unable to find any information regarding a SpaceX IPO from the allowed public or private sources configured in your AI Settings. Please check your AI Settings page to ensure all desired sources are enabled, or try a different query.`;
         } else {
           let responses = [];
           if (yahooAllowed) {

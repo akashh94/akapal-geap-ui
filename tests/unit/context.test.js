@@ -16,8 +16,8 @@ global.state = {
 
 global.mockData = {
   user: {
-    firstName: 'Sree',
-    lastName: 'K.',
+    firstName: 'Mark',
+    lastName: 'Jorgensen',
     lastLogin: 'June 8, 2026'
   },
   accounts: [
@@ -44,7 +44,7 @@ test('ContextEngine - getContextPayload', (t) => {
   
   assert.strictEqual(payload.platform.route, '/pay-transfer');
   assert.strictEqual(payload.platform.theme, 'dark');
-  assert.strictEqual(payload.user.name, 'Sree K.');
+  assert.strictEqual(payload.user.name, 'Mark Jorgensen');
   assert.strictEqual(payload.user.lastLogin, 'June 8, 2026');
   assert.strictEqual(payload.account.selectedId, 'checking');
   assert.strictEqual(payload.account.netValue, '$1,200.00');
@@ -60,7 +60,7 @@ test('ContextEngine - formatContextToMarkdown', (t) => {
 
   assert.ok(markdown.includes('=== SYSTEM CONTEXT ==='));
   assert.ok(markdown.includes('Route**: /pay-transfer'));
-  assert.ok(markdown.includes('User**: Sree K.'));
+  assert.ok(markdown.includes('User**: Mark Jorgensen'));
   assert.ok(markdown.includes('Net Account Value**: $1,200.00'));
   assert.ok(markdown.includes('Buying Power**: $600.00'));
 });
