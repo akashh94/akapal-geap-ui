@@ -2239,6 +2239,14 @@ const GeapApp = {
         continue;
       }
 
+      const task = line.match(/^\s*[-*+]\s+\[( |x|X)\]\s+(.*)$/);
+      if (task) {
+        if (listTag !== "ul") { closeBlocks(); html += "<ul>"; listTag = "ul"; }
+        const checked = task[1].toLowerCase() === "x" ? " checked" : "";
+        html += `<li><label class="markdown-task"><input type="checkbox" disabled${checked}> ${inline(task[2])}</label></li>`;
+        continue;
+      }
+
       const bullet = line.match(/^\s*[-*+]\s+(.*)$/);
       if (bullet) {
         if (listTag !== "ul") { closeBlocks(); html += "<ul>"; listTag = "ul"; }

@@ -265,6 +265,17 @@
   margin: 2px 0;
 }
 
+.message-content .markdown-task {
+  display: block;
+  margin: 4px 0;
+}
+
+.message-content .markdown-task input[type="checkbox"] {
+  margin-right: 6px;
+  vertical-align: middle;
+  accent-color: var(--geap-blue);
+}
+
 .message-content blockquote {
   border-left: 3px solid var(--geap-border);
   color: var(--geap-text-secondary);

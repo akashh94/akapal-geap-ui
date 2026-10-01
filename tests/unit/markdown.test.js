@@ -8,7 +8,7 @@ const path = require('path');
 // here because every "{"/"}" in the body (regex quantifiers, template literals)
 // is balanced.
 function loadRenderMarkdown() {
-  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'js', 'app.js'), 'utf8');
+  const src = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'js', 'app.js'), 'utf8');
   const marker = 'renderMarkdown(text) {';
   const start = src.indexOf(marker);
   assert.ok(start >= 0, 'renderMarkdown should exist in js/app.js');
@@ -32,6 +32,8 @@ const cases = [
   ['bold/italic/code', '**a** *b* `c`', '<strong>a</strong> <em>b</em> <code>c</code>'],
   ['strikethrough', '~~gone~~', '<del>gone</del>'],
   ['unordered list', '- a\n- b', '<ul><li>a</li><li>b</li></ul>'],
+  ['task unchecked', '- [ ] todo', '<ul><li><label class="markdown-task"><input type="checkbox" disabled> todo</label></li></ul>'],
+  ['task checked', '- [x] done', '<ul><li><label class="markdown-task"><input type="checkbox" disabled checked> done</label></li></ul>'],
   ['ordered list', '1. a\n2. b', '<ol><li>a</li><li>b</li></ol>'],
   ['blockquote', '> quoted', '<blockquote>quoted</blockquote>'],
   ['whitespace hr', '- - -', '<hr>'],

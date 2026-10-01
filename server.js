@@ -70,7 +70,7 @@ app.use(["/api", "/auth"], (req, res, next) => {
 });
 
 // Startup CSS Minification
-const cssDir = path.join(__dirname, "css");
+const cssDir = path.join(__dirname, "public", "css");
 if (fs.existsSync(cssDir)) {
   const cssFiles = fs.readdirSync(cssDir).filter(f => f.endsWith(".css") && !f.endsWith(".min.css"));
   cssFiles.forEach(file => {
@@ -92,7 +92,7 @@ if (fs.existsSync(cssDir)) {
 }
 
 const port = Number(process.env.PORT || 3000);
-const publicDir = __dirname;
+const publicDir = path.join(__dirname, "public");
 
 app.disable("x-powered-by");
 
