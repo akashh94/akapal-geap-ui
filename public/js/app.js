@@ -2138,18 +2138,11 @@ const GeapApp = {
 
   renderMarkdown(text) {
     if (!text) return "";
-    return String(text)
-      // headings: #### … down to # …
-      .replace(/^#####\s+(.*)$/gm, '<h5>$1</h5>')
-      .replace(/^####\s+(.*)$/gm, '<h4>$1</h4>')
-      .replace(/^###\s+(.*)$/gm, '<h3>$1</h3>')
-      .replace(/^##\s+(.*)$/gm, '<h2>$1</h2>')
-      .replace(/^#\s+(.*)$/gm, '<h1>$1</h1>')
-      // task-list checkboxes
-      .replace(/^\s*[-*]\s+\[ \]\s+(.*)$/gm, '<label class="markdown-task"><input type="checkbox" disabled> $1</label>')
-      .replace(/^\s*[-*]\s+\[x\]\s+(.*)$/gm, '<label class="markdown-task"><input type="checkbox" checked disabled> $1</label>')
+
+    const inline = (str) => str
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/~~(.*?)~~/g, "<del>$1</del>")
       .replace(/`(.*?)`/g, "<code>$1</code>")
       .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
         if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("tel:")) {
@@ -2157,9 +2150,128 @@ const GeapApp = {
           return `<a href="${url}"${target}>${label}</a>`;
         }
         return `<a href="${url}" data-route>${label}</a>`;
-      })
-      .replace(/\n[-*] /g, "\n• ")
-      .replace(/\n/g, "<br>");
+      });
+
+    const splitRow = (row) => row.trim()
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map((cell) => cell.trim());
+
+    const isSeparatorRow = (row) => {
+      if (!row.includes("|")) return false;
+      const cells = splitRow(row);
+      return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell));
+    };
+
+    const escapeHtml = (str) => String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+    const lines = String(text).split("\n");
+    let html = "";
+    let inCode = false;
+    let codeBuf = [];
+    let listTag = null;
+    let quoteBuf = null;
+
+    const closeBlocks = () => {
+      if (listTag) { html += `</${listTag}>`; listTag = null; }
+      if (quoteBuf) { html += `<blockquote>${quoteBuf.join("<br>")}</blockquote>`; quoteBuf = null; }
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      if (/^\s*```/.test(line)) {
+        if (inCode) {
+          html += `<pre><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`;
+          codeBuf = [];
+          inCode = false;
+        } else {
+          closeBlocks();
+          inCode = true;
+        }
+        continue;
+      }
+      if (inCode) { codeBuf.push(line); continue; }
+
+      if (line.includes("|") && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
+        closeBlocks();
+        const headers = splitRow(line);
+        const rows = [];
+        i += 2;
+        while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
+          rows.push(splitRow(lines[i]));
+          i++;
+        }
+        i--;
+
+        const head = headers.map((cell) => `<th>${inline(cell)}</th>`).join("");
+        const body = rows
+          .map((cells) => `<tr>${headers.map((_, c) => `<td>${inline(cells[c] || "")}</td>`).join("")}</tr>`)
+          .join("");
+        html += `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+        continue;
+      }
+
+      if (line.trim() === "") { closeBlocks(); continue; }
+
+      const heading = line.match(/^(#{1,6})\s+(.*)$/);
+      if (heading) {
+        closeBlocks();
+        const level = heading[1].length;
+        html += `<h${level}>${inline(heading[2])}</h${level}>`;
+        continue;
+      }
+
+      if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+        closeBlocks();
+        html += "<hr>";
+        continue;
+      }
+
+      const quote = line.match(/^\s*>\s?(.*)$/);
+      if (quote) {
+        if (listTag) { html += `</${listTag}>`; listTag = null; }
+        if (!quoteBuf) quoteBuf = [];
+        quoteBuf.push(inline(quote[1]));
+        continue;
+      }
+
+      const task = line.match(/^\s*[-*+]\s+\[( |x|X)\]\s+(.*)$/);
+      if (task) {
+        if (listTag !== "ul") { closeBlocks(); html += "<ul>"; listTag = "ul"; }
+        const checked = task[1].toLowerCase() === "x" ? " checked" : "";
+        html += `<li><label class="markdown-task"><input type="checkbox" disabled${checked}> ${inline(task[2])}</label></li>`;
+        continue;
+      }
+
+      const bullet = line.match(/^\s*[-*+]\s+(.*)$/);
+      if (bullet) {
+        if (listTag !== "ul") { closeBlocks(); html += "<ul>"; listTag = "ul"; }
+        html += `<li>${inline(bullet[1])}</li>`;
+        continue;
+      }
+
+      const numbered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+      if (numbered) {
+        if (listTag !== "ol") { closeBlocks(); html += "<ol>"; listTag = "ol"; }
+        html += `<li>${inline(numbered[1])}</li>`;
+        continue;
+      }
+
+      closeBlocks();
+      html += inline(line) + "<br>";
+    }
+
+    if (inCode) {
+      html += `<pre><code>${escapeHtml(codeBuf.join("\n"))}</code></pre>`;
+    }
+    closeBlocks();
+
+    return html.replace(/<br>$/, "");
   }
 };
 
