@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const path = require('path');
 
 // Mock DOM and globals
 global.document = {
@@ -11,7 +12,7 @@ global.document = {
 };
 
 // Load insights.js code
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/insights.js', 'utf8');
+const code = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'insights.js'), 'utf8');
 eval(code + '\nglobal.AIInsightsPage = AIInsightsPage;');
 
 test('AI Insights Hub Page - renderView', (t) => {

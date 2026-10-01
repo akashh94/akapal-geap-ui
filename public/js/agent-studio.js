@@ -8,13 +8,13 @@ const AgentStudio = (() => {
   let selectedAgentId = 'portfolio-analyst';
 
   const agentConfigs = {
-    'portfolio-analyst': { model: 'gemini-2.5-flash', temperature: 0.3, tools: ['getPortfolioHoldings', 'getAccountSummary', 'getSectorAllocation'] },
-    'trade-assistant': { model: 'gemini-2.5-flash', temperature: 0.4, tools: ['getQuote', 'getPortfolioHoldings', 'getAccountSummary', 'getMarketSummary'] },
-    'market-research': { model: 'gemini-2.5-flash', temperature: 0.5, tools: ['getQuote', 'getMarketSummary', 'getPortfolioHoldings'] },
-    'customer-support': { model: 'gemini-2.5-flash', temperature: 0.7, tools: ['getAccountSummary', 'getFAQ'] },
-    'ken-agent': { model: 'gemini-2.5-flash', temperature: 0.5, tools: ['getPortfolioHoldings', 'getAccountSummary', 'searchFinancialInfo'] },
-    'market-research-super-agent': { model: 'gemini-2.5-flash', temperature: 0.5, tools: ['getQuote', 'getMarketSummary', 'getPortfolioHoldings', 'navigateToPage', 'searchFinancialInfo'] },
-    'mortgage-agent': { model: 'gemini-2.5-flash', temperature: 0.5, tools: ['getAccountSummary', 'navigateToPage', 'searchFinancialInfo'] },
+    'portfolio-analyst': { model: 'gemini-3.5-flash', temperature: 0.3, tools: ['getPortfolioHoldings', 'getAccountSummary', 'getSectorAllocation'] },
+    'trade-assistant': { model: 'gemini-3.5-flash', temperature: 0.4, tools: ['getQuote', 'getPortfolioHoldings', 'getAccountSummary', 'getMarketSummary'] },
+    'market-research': { model: 'gemini-3.5-flash', temperature: 0.5, tools: ['getQuote', 'getMarketSummary', 'getPortfolioHoldings'] },
+    'customer-support': { model: 'gemini-3.5-flash', temperature: 0.7, tools: ['getAccountSummary', 'getFAQ'] },
+    'ken-agent': { model: 'gemini-3.5-flash', temperature: 0.5, tools: ['getPortfolioHoldings', 'getAccountSummary', 'searchFinancialInfo'] },
+    'market-research-super-agent': { model: 'gemini-3.5-flash', temperature: 0.5, tools: ['getQuote', 'getMarketSummary', 'getPortfolioHoldings', 'navigateToPage', 'searchFinancialInfo'] },
+    'mortgage-agent': { model: 'gemini-3.5-flash', temperature: 0.5, tools: ['getAccountSummary', 'navigateToPage', 'searchFinancialInfo'] },
   };
 
   function renderView() {
@@ -24,7 +24,7 @@ const AgentStudio = (() => {
     let config = agentConfigs[selectedAgentId];
     if (!config && selected) {
       config = {
-        model: selected.model || 'gemini-2.5-flash',
+        model: selected.model || 'gemini-3.5-flash',
         temperature: selected.temperature !== undefined ? selected.temperature : 0.5,
         tools: selected.tools || []
       };
@@ -124,7 +124,7 @@ const AgentStudio = (() => {
             <div class="studio-config-section">
               <div class="studio-config-title">Model</div>
               <select style="width: 100%; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px;" id="config-model">
-                <option value="gemini-2.5-flash" ${config.model === 'gemini-2.5-flash' ? 'selected' : ''}>gemini-2.5-flash</option>
+                <option value="gemini-3.5-flash" ${config.model === 'gemini-3.5-flash' ? 'selected' : ''}>gemini-3.5-flash</option>
                 <option value="gemini-2.5-pro" ${config.model === 'gemini-2.5-pro' ? 'selected' : ''}>gemini-2.5-pro</option>
               </select>
             </div>
@@ -219,6 +219,13 @@ const AgentStudio = (() => {
     body.scrollTop = body.scrollHeight;
 
     try {
+      let contextData = '';
+      const contextPayload = ContextEngine.getContextPayload(agent.id);
+      contextData += ContextEngine.formatContextToMarkdown(contextPayload);
+
+      agent.tools.forEach(toolName => {
+        contextData += '\n\n' + AgentManager.callTool(toolName);
+      });
       const systemPromptWithData = agent.systemPrompt + '\n\nCURRENT DATA:\n' + contextData;
 
       const response = await GeminiAPI.sendMessage(
@@ -401,7 +408,7 @@ const AgentStudio = (() => {
       icon,
       iconBg,
       description,
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.5,
       tools: checkedTools,
       systemPrompt,
@@ -412,7 +419,7 @@ const AgentStudio = (() => {
     AgentManager.registerAgent(config);
 
     agentConfigs[id] = {
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.5,
       tools: checkedTools
     };

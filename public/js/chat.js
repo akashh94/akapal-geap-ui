@@ -265,7 +265,7 @@ const Chat = (() => {
           <div class="message-content">
             <p><strong>Welcome to the GEAP AI Assistant!</strong></p>
             <p>${getWelcomeMessage()}</p>
-            <p style="margin-top: 8px; font-size: 12px; color: var(--muted, #64646b);">Connected to GEAP agents via ADK backend</p>
+            ${(state.aiSettings?.assistantMode === 'gemini' && !GeapApp.getApiKey()) ? `<p style="margin-top: 8px;"><button class="outline-button" onclick="GeapApp.showApiKeyModal()">🔑 Set API Key to enable AI</button></p>` : ''}
           </div>
         </div>
       </div>
@@ -428,7 +428,7 @@ const Chat = (() => {
     setAvatarState('thinking');
 
     const originalMessage = text.trim();
-    
+
     // 1. Run preprocessing (PII Redaction & Safety Check)
     const preprocessResult = preprocessQuery(originalMessage);
     
@@ -474,8 +474,11 @@ const Chat = (() => {
     const suggestionsEl = document.getElementById('chat-suggestions');
     if (suggestionsEl) suggestionsEl.style.display = 'none';
 
-    // Server-side ADK supervisor handles agent routing
-    const agent = AgentManager.getAgent(currentAgentId === 'auto' ? 'portfolio-analyst' : currentAgentId);
+    let agentId = currentAgentId;
+    if (agentId === 'auto') {
+      agentId = AgentManager.autoRoute(message, detectPage());
+    }
+    const agent = AgentManager.getAgent(agentId);
     updateHeader(agent.name);
 
     conversationHistory.push({ role: 'user', parts: [{ text: message }] });
@@ -483,115 +486,648 @@ const Chat = (() => {
     const typingEl = showTypingIndicator();
     isStreaming = true;
 
-    // Send to the GEAP agent bridge (server.js → Vertex AI Agent Engine) via SSE
-    let streamingText = '';
-    let streamingBubbleCreated = false;
-    let widgetSignal = '';
+    // Check if it's one of the high-value demo queries (case-insensitive match) and no API key is set
+    let mockResponse = null;
+    const normalizedMsg = message.toLowerCase();
 
-    fetch(`${window.GEAP_AGENT_URL || ""}/api/geap/query`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: message })
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const errBody = await response.text().catch(() => "");
-          throw new Error(`Server error (${response.status}): ${errBody || response.statusText}`);
+    const isPiiTestQuery = normalizedMsg.includes("test pii scrubber");
+    const isAiAnalyzerQuery = normalizedMsg.includes("run deep ai portfolio analysis") || normalizedMsg.includes("ai analyzer for account");
+    if (isPiiTestQuery) {
+      mockResponse = `### 🛡️ GEAP Privacy Shield Demonstration
+      
+I have intercepted and processed your message. Before transmitting any prompt content to the external LLM, the **GEAP Security Engine** automatically scanned the query and scrubbed all sensitive information:
+* **Social Security Number**: Redacted to \`[REDACTED SSN]\`
+* **Account Number**: Redacted to \`[REDACTED ACCOUNT]\`
+
+The underlying model received only the sanitized version: 
+*\`Test PII scrubber: my SSN is [REDACTED SSN] and my account is [REDACTED ACCOUNT]\`*
+
+This prevents credential leakage and ensures strict compliance with Morgan Stanley data governance guidelines.
+
+You can customize these rules and toggle specific sources in the [AI Settings Page](/ai-settings).`;
+    } else if (isAiAnalyzerQuery) {
+      mockResponse = `### 📊 Deep AI Portfolio Health & Optimization Analysis
+      
+I have compiled a comprehensive portfolio diagnostic report for **${message.split("account: ")[1] || "your selected account"}** using the **Portfolio Analyst** agent. 
+
+Our optimization engine has analyzed your holdings, diversification balance, tax efficiency, and yield performance. Below is the interactive visual diagnostic dashboard and recommended workflows:
+
+[[WIDGET:AI_PORTFOLIO_ANALYZER]]
+
+---
+*Disclaimer: All recommendations are for educational purposes. Please consult your wealth advisor prior to execution.*`;
+    } else if (normalizedMsg.includes("comprehensive risk analysis") || normalizedMsg.includes("run active risk analysis") || (normalizedMsg.includes("risk") && normalizedMsg.includes("analysis")) || normalizedMsg.includes("rebalance my portfolio") || normalizedMsg.includes("rebalance")) {
+      mockResponse = `### 📊 AI Portfolio Risk Analysis & Diagnostic
+
+Our diagnostics have analyzed your active holdings against regulatory and custom firm guidelines. We have identified elevated concentration and sector exposure thresholds:
+
+#### ⚡ Current Exposure vs. Policy Thresholds
+| Dimension | Active Portfolio | Firm Policy Limit | Risk Status |
+| :--- | :---: | :---: | :---: |
+| **Technology Sector** | **78.0%** | 50.0% | 🚨 High Risk |
+| **MSFT Concentration** | **15.9%** | 15.0% | 🚨 High Risk |
+| **Portfolio Beta** | **1.42** | 1.20 | ⚠️ Elevated |
+
+#### 💡 Actionable Rebalancing Recommendation
+To reduce technology concentration risk, bring **MSFT** below the **15%** limit, and increase asset stability, we recommend **selling 50 shares of MSFT** and reallocating the proceeds into **BND (Vanguard Total Bond Market ETF)**.
+
+[[WIDGET:REBALANCE_FORM]]`;
+    }
+
+    if (normalizedMsg.includes("retirement") || normalizedMsg.includes("monte carlo") || normalizedMsg.includes("glide path") || normalizedMsg.includes("planning & retirement")) {
+      mockResponse = `### ✦ GEAP Retirement Health Check & Projections
+
+I have generated your retirement planning health check analysis based on your target retirement age of **65 (in 2046)** and current retirement savings rate. 
+
+#### 📊 Retirement Health Summary
+* **Savings Progress**: **$84,230.15** (On Track)
+* **Projected Value (Age 65)**: **$1,245,000**
+* **Success Probability**: **84%** based on 1,000 Monte Carlo simulations.
+
+Use the **interactive chart widget** and speed dial options below to visualize your wealth path:
+
+[[WIDGET:RETIREMENT_CHARTS]]
+
+---
+*Disclaimer: Projections are simulated using historical covariance models and do not guarantee future returns.*`;
+    }
+
+    if (normalizedMsg.includes("tax loss") || normalizedMsg.includes("tax-loss") || normalizedMsg.includes("harvesting") || normalizedMsg.includes("tax harvest")) {
+      mockResponse = `### 📝 Tax-Loss Harvesting Opportunity Analysis
+Based on your current portfolio holdings, the **Tax Specialist** and **Portfolio Analyst** agents have identified harvestable capital losses that can be used to offset capital gains or up to $3,000 of ordinary income.
+
+#### 🔍 Identified Harvest Candidates:
+* **KO (Coca-Cola)**: 50 shares @ $76.84 | Unrealized Loss: **-$96.00**
+* **MBLY (Mobileye)**: 120 shares @ $10.54 | Unrealized Loss: **-$24.00**
+* **RIVN (Rivian)**: 80 shares @ $18.12 | Unrealized Loss: **-$12.00**
+
+**Total Harvestable Loss**: **-$132.00**
+
+#### 💡 Strategy Recommendation:
+To harvest these losses, you can sell the positions above and immediately reinvest the proceeds in a similar but not substantially identical asset (e.g. broad market ETFs) to maintain exposure while avoiding the SEC **Wash Sale Rule** (30-day window).
+
+Would you like me to help you navigate to the [Trading Page](/trading) to execute these transactions?`;
+    }
+
+    const isOrchestrationQuery = normalizedMsg.includes("refinance") && (normalizedMsg.includes("rebalance") || normalizedMsg.includes("proceeds") || normalizedMsg.includes("refi"));
+    if (isOrchestrationQuery) {
+      mockResponse = `### ✦ GEAP Cross-Agent Wealth Orchestration Pipeline
+      
+I have initiated a cross-agent coordination workflow to analyze your refinancing and rebalancing scenario. Three specialized agents have collaborated to formulate this recommendation:
+
+1. **Mortgage Agent** 🏡 Analyzed refinancing rates and home equity.
+2. **Portfolio Analyst** 📊 Analyzed cash infusion rebalancing scenarios.
+3. **Trade Assistant** ⚡ Prepared draft order staging.
+
+#### 🏡 Step 1: Mortgage Agent Analysis
+* **Current Mortgage**: $320,000 @ 6.25%
+* **Refinance Quote (Morgan Stanley Home Loans)**: 30-Year Fixed at **5.25%** (Monthly savings: **+$240**)
+* **Cash-Out Recommendation**: Extract **$50,000** home equity at a 5.50% cost of capital.
+
+#### 📊 Step 2: Portfolio Analyst Recommendation
+* **Proceeds Allocation**: Reinvesting the $50,000 cash-out proceeds into your Core Brokerage portfolio (**...6408**).
+* **Diversification Shift**: Deploying cash into under-allocated sectors to trim technology risk:
+  * **Diversified Bonds (BND)**: Increase allocation from **3.1%** to **35.0%** (deploying $35,000).
+  * **International Equities (VXUS)**: Introduce a **15.0%** allocation (deploying $15,000).
+* **Beta Reduction**: Reduces portfolio Beta from **1.42** (High Volatility) to **1.08** (Balanced Market Volatility).
+
+#### ⚡ Step 3: Trade Assistant Preview (Draft Mode)
+* Orders are prepared in **Draft Mode** (requires manual review before execution).
+* Staged **BUY 480 BND** @ $72.15 (Est: $34,632)
+* Staged **BUY 260 VXUS** @ $57.50 (Est: $14,950)
+
+[[WIDGET:ORCHESTRATION_GRAPH]]
+
+---
+*Disclaimer: Refinance rates and investment recommendations are subject to credit approval and suitability reviews.*`;
+    }
+
+    const isWithdrawQuery = normalizedMsg.includes("withdraw") || normalizedMsg.includes("transfer");
+    const isWireQuery = normalizedMsg.includes("wire") || normalizedMsg.includes("large transfer") || normalizedMsg.includes("withdraw 10000") || normalizedMsg.includes("withdraw $10000");
+
+    if (isWireQuery) {
+      mockResponse = `### 🚨 Human Advisor Escalation Required
+      
+I am unable to authorize or execute outbound wire transfers or cash withdrawals via the autonomous AI assistant. Under Morgan Stanley security guardrails, all wire requests require **human-in-the-loop verification** to prevent unauthorized transfers and fraud.
+
+**Actions taken:**
+1. Routed your wire transfer intent to your **Morgan Stanley Team**.
+2. Staged a secure wire transaction draft.
+3. Created a callback ticket (Reference ID: **MS-WIRE-84920**).
+
+A member of your wealth advisory team will call you within **15 minutes** at your registered phone number to verify this wire transfer.
+
+You can also contact the wire desk directly at **(888) 454-0555** or visit the [Pay & Transfer Center](/pay-transfer) to review staged drafts.`;
+    } else if (isWithdrawQuery) {
+      const accountId = state.selectedAccountId || 'core';
+      const accountsList = (typeof mockData !== 'undefined' && mockData.accounts) ? mockData.accounts : [];
+      const activeAccount = accountsList.find(a => a.id === accountId);
+      const accountType = activeAccount ? activeAccount.type : 'Brokerage';
+      const accountLabel = activeAccount ? activeAccount.label : 'CORE - Ind Brokerage';
+
+      if (accountType === 'Custodial') {
+        mockResponse = `⚠️ **Legal Compliance Gate Alert**
+        
+Your active account context is a **Custodial UTMA/UGMA Account** (${accountLabel}). 
+
+Under regulatory rules (Uniform Transfers to Minors Act), funds in this account belong irrevocably to the beneficiary (**Elcie Lejnieks**). Custodians may only withdraw funds for the direct benefit of the minor. 
+
+**Enforcement Actions:**
+1. **Tool Blocked**: Automated outbound electronic transfer tools have been disabled for this account type.
+2. **Routing Update**: Your request has been routed to the **Compliance Auditor Agent** for document review.
+3. **Escalation**: Direct wire requests require paper form submission or human advisor verification.
+
+To proceed with custodian authorization, please call our compliance desk at (888) 454-0555 or contact your [Morgan Stanley Wealth Team](/support).`;
+      } else if (accountType === 'Bank') {
+        mockResponse = `### 🏦 Checking Account Money Movement
+        
+Your active account context is a **Morgan Stanley Private Bank Checking Account** (${accountLabel}). 
+
+Checking accounts support direct cash withdrawals, transfers, and ACH wires. 
+
+**Available Cash**: **${activeAccount ? (activeAccount.available || '$6,941.26') : '$6,941.26'}**
+
+You can:
+* Go to the [Pay & Transfer Center](/pay-transfer) to initiate a transfer.
+* [Order checks](/support) or view debit card status.
+* Ask me to draft a transfer request to another of your accounts.`;
+      } else {
+        mockResponse = `### 📊 Brokerage Account Money Movement
+        
+Your active account context is an **Individual Brokerage Account** (${accountLabel}). 
+
+To withdraw cash from this brokerage account, the funds must first be settled cash. 
+
+**Details**:
+* **Total Value**: **${activeAccount ? (activeAccount.netValue || '$12,734.88') : '$12,734.88'}**
+* **Available Cash (Settle/Buying Power)**: **${activeAccount ? (activeAccount.available || '$246.19') : '$246.19'}**
+
+*Note: Selling equity holdings requires **T+1 business day settlement** before cash can be wired out. If you withdraw more than the available settled cash, you will automatically initiate a **Margin Loan** subject to current margin interest rates.*
+
+Would you like to review [Rebalance Options](/accounts/portfolios) or view the [Trading Page](/trading) to free up cash?`;
+      }
+    }
+
+    if (!mockResponse && (normalizedMsg.includes("triage") || normalizedMsg.includes("alerts"))) {
+      mockResponse = `### ⚠️ Alert Triage & Recommendations
+I have triaged your active alerts and categorized them by urgency:
+
+#### 🚨 High Priority (Action Required)
+* **Concentration Flag (MSFT)**: Position is at **15.9%** ($35,614.40). Risk parameters recommend trimming to below 15% to maintain diversification.
+* **Missing Beneficiary**: Brokerage account lacks estate instructions.
+
+#### 📅 Medium Priority (Market Events)
+* **Earnings Upcoming**: **NVDA** reports earnings next Thursday. Implied volatility is elevated.
+* **Price Target Reached**: **AAPL** crossed its $190 target threshold.
+
+#### 💡 Recommended Next Step
+View your full inbox and filter by category on the [Alerts Page](/alerts) to clear resolved notifications.`;
+    }
+
+    if (!mockResponse && !GeapApp.getApiKey()) {
+
+      // Dashboard Demo Queries
+      if (normalizedMsg.includes("briefing")) {
+        mockResponse = `### 📋 Account Briefing
+Here is a summary of your accounts and items requiring attention as of **June 8, 2026**:
+
+#### 💰 Balances & Performance
+* **Total Assets**: **$52,430.20**
+* **Day's Gain**: **+$340.50 (+0.65%)**
+* **Cash Balance**: **$1,540.20** across all checking/brokerage accounts.
+
+#### ⚠️ Items Requiring Attention (2 Alerts)
+1. **Concentration Risk (High)**: Your position in **MSFT** represents **15.9%** ($35,614.40) of your brokerage account, which exceeds the standard **15%** single-stock threshold.
+2. **Estate Planning (Medium)**: Your Brokerage account (***1864**) has **no beneficiary** designated.
+
+#### 💡 Recommended Actions
+* [ ] Review [Rebalance Ideas](/accounts/portfolios) to reduce concentration in MSFT.
+* [ ] Go to [Profile & Settings](/profile) to add a primary beneficiary.`;
+      } else if (normalizedMsg.includes("explain my portfolio") || normalizedMsg.includes("diversified") || normalizedMsg.includes("portfolio explanation")) {
+        mockResponse = `### 📈 Portfolio Analysis
+Here is a breakdown of your portfolio holdings and allocation:
+
+#### 📊 Sector Allocation
+* **Technology**: **78.0%** ($35,614.40) — heavily concentrated.
+* **Cash & Equivalents**: **20.0%** ($10,486.04) — high liquidity.
+* **Financials/Other**: **12.0%** ($6,329.76).
+
+#### ⚡ Active Movers Today
+* **NVDA** (Lead Gainer): **+2.45%** today, driving **+$125.40** of your gain.
+* **MSFT**: **+0.12%** today, lagging but stable.
+
+#### 🛡️ Concentration Assessment
+You hold **5 active positions**, with **MSFT** representing the single largest risk driver. Because it exceeds 15% of your total assets, you are highly exposed to software sector volatility.
+
+#### 💡 Suggested Action
+You can view sector metrics and trigger rebalancing suggestions on the [Portfolios Page](/accounts/portfolios).`;
+      } else if (normalizedMsg.includes("take me to the agent fabric") || normalizedMsg.includes("agent fabric")) {
+        mockResponse = `### 🗺️ Navigation Assistant
+        I will redirect you to the **AI Admin / Agent Fabric** view now.
+        
+        Redirecting you to [Agent Fabric](/agent-fabric)...`;
+        
+        // Trigger redirect after a short delay
+        setTimeout(() => {
+          if (typeof routeTo === 'function') {
+            routeTo('/agent-fabric');
+          }
+        }, 1500);
+      }
+
+      // Portfolio Page Demo Queries
+      else if (normalizedMsg.includes("analyze my holdings")) {
+        mockResponse = `### 📈 Holdings Analysis
+Your portfolio consists of 5 positions valued at **$48,912.74**:
+* **MSFT**: 92 shares @ $387.11 (**$35,614.40**) — Weight: **72.8%** | Return: **+14.2%**
+* **NVDA**: 110 shares @ $95.34 (**$10,486.04**) — Weight: **21.4%** | Return: **+8.5%**
+* **AAPL**: 12 shares @ $185.12 (**$2,221.44**) — Weight: **4.5%** | Return: **-2.1%**
+* **Cash**: **$1,540.20** — Weight: **3.1%**
+
+**Observation**: Your holdings are heavily dominated by MSFT and tech sector growth. Underperforming positions like AAPL should be reviewed.`;
+      } else if (normalizedMsg.includes("underperforming")) {
+        mockResponse = `### 📉 Underperforming Stocks
+Based on total returns:
+* **AAPL** is currently down **-2.1%** from your cost basis, representing a loss of **-$48.20**.
+* All other positions (MSFT, NVDA) are positive.
+
+**Tip**: Consider if tax-loss harvesting or reallocating this capital into diversified index assets fits your strategy.`;
+      } else if (normalizedMsg.includes("rebalancing")) {
+        mockResponse = `### ⚖️ Rebalancing Suggestions
+To reduce technology concentration and rebalance back to a standard 60/40 allocation:
+1. **Trim MSFT**: Sell **20 shares** of MSFT (~$7,742) to bring its weight down to a safer 55%.
+2. **Reallocate to Diversified Assets**: Deploy the proceeds into broad-market ETFs or increase your cash reserves to take advantage of market dips.`;
+      }
+
+      // Trading Page Demo Queries
+      else if (normalizedMsg.includes("order type")) {
+        mockResponse = `### ⚡ Guide to Order Types
+Here are the main order types you can use on E*TRADE:
+1. **Market Order**: Executes immediately at the best available price. Use when speed of execution is your top priority.
+2. **Limit Order**: Executes only at your specified price or better. Use when you want price certainty and are willing to wait.
+3. **Stop Order**: Becomes a market order once a stop price is triggered. Use to protect against downside losses.`;
+      } else if (normalizedMsg.includes("aapl a good buy") || normalizedMsg.includes("buy aapl")) {
+        mockResponse = `### 🔬 AAPL Market Analysis (Mock Research)
+* **Current Price**: **$185.12** (+0.45%)
+* **Valuation**: P/E ratio is **28.2**, which is in-line with its 5-year average.
+* **Bull Case**: Robust service revenue growth and upcoming AI software features.
+* **Bear Case**: Slower hardware upgrade cycles and valuation premium relative to earnings growth.
+
+*Educational note: Always assess whether AAPL fits your risk tolerance and portfolio diversification goals.*`;
+      } else if (normalizedMsg.includes("set a limit order")) {
+        mockResponse = `### 📝 Setting a Limit Order
+Follow these steps to set a limit order:
+1. Go to the [Trading Page](/trading).
+2. Enter the symbol (e.g., **AAPL**).
+3. Select **Buy** and order type **Limit**.
+4. Set your Limit Price (e.g., **$183.00** if you want to buy when the price drops).
+5. Enter the quantity and click **Preview Order**.`;
+      }
+
+      // Agent Studio Page Demo Queries
+      else if (normalizedMsg.includes("agents work")) {
+        mockResponse = `### 🤖 How GEAP Agents Work
+The platform runs a multi-agent system built on the Google Enterprise Agent Platform (GEAP):
+1. **Auto Router**: Classifies your query and forwards it to the best-suited agent.
+2. **Specialized Agents**: Each agent is equipped with a custom system prompt and a specific set of mock read-tools (e.g., \`getPortfolioHoldings\`, \`getQuote\`).
+3. **Tool Execution**: Agents execute tool queries in real time to fetch data and formulate a response.`;
+      } else if (normalizedMsg.includes("portfolio agent do")) {
+        mockResponse = `### 📊 Portfolio Analyst Capabilities
+The Portfolio Analyst agent can:
+* Access \`getPortfolioHoldings\` to see your current shares, costs, and weights.
+* Access \`getSectorAllocation\` to see sector exposure.
+* Recommend rebalancing steps and flag concentration risks.
+* Calculate total returns and day's change impact.`;
+      } else if (normalizedMsg.includes("routing configured")) {
+        mockResponse = `### 🗺️ Routing Configuration
+      Routing is handled dynamically in agents.js:
+* **Keyword Matching**: Checks query text for thematic keywords (e.g., 'rebalance' -> Portfolio Analyst, 'buy' -> Trade Assistant).
+* **Page Bias**: Adds routing weight depending on the SPA view you are currently viewing, making the assistant context-aware.`;
+      }
+
+      // Agent Fabric Page Demo Queries
+      else if (normalizedMsg.includes("agent performance")) {
+        mockResponse = `### 📊 Agent Fleet Metrics
+Here is a snapshot of current performance from the Agent Fabric:
+* **Active Agents**: **4** (Portfolio, Trade, Research, Support)
+* **Success Rate**: **99.8%**
+* **Avg Response Time**: **1.2s**
+* **Active Sessions**: **42**
+* All systems are operating normally.`;
+      } else if (normalizedMsg.includes("busiest")) {
+        mockResponse = `### 🔥 Busiest Agent
+The **Portfolio Analyst** agent is currently the busiest, handling **45%** of all customer requests today, followed by **Market Research** (30%).`;
+      } else if (normalizedMsg.includes("bloomberg") || normalizedMsg.includes("inflation")) {
+        const allowed = state.aiSettings?.allowedSources || {};
+        if (allowed.bloomberg === false) {
+          mockResponse = `Access Blocked: The source "Bloomberg" is currently blacklisted in your AI Settings. I cannot retrieve information from it.`;
+        } else {
+          mockResponse = `### Bloomberg Economic Survey: Inflation at 2.4%
+Bloomberg economists report core CPI has moderated to 2.4% year-over-year. The Fed is expected to hold rates steady but signal a cut for the September meeting. [Source: Bloomberg]`;
         }
-        return response.body.getReader();
-      })
-      .then(async (reader) => {
+      } else if (normalizedMsg.includes("spacex") || normalizedMsg.includes("starlink")) {
+        const allowed = state.aiSettings?.allowedSources || {};
+        const yahooAllowed = allowed.yahoo !== false;
+        const bloombergAllowed = allowed.bloomberg !== false;
+        const reutersAllowed = allowed.reuters !== false;
+
+        if (!yahooAllowed && !bloombergAllowed && !reutersAllowed) {
+          mockResponse = `I am sorry, Sree. I am unable to find any information regarding a SpaceX IPO from the allowed public or private sources configured in your AI Settings. Please check your AI Settings page to ensure all desired sources are enabled, or try a different query.`;
+        } else {
+          let responses = [];
+          if (yahooAllowed) {
+            responses.push(`### SpaceX Valuation Hits $210 Billion; Starlink IPO Speculation Grows\nSpaceX is executing a secondary tender offer valuing the private aerospace giant at $210 billion. While Elon Musk has stated SpaceX itself will remain private to focus on Mars missions, rumors persist that Starlink, its satellite internet division, could be spun off for an IPO by late 2026 as its cash flow turns positive. [Source: Yahoo Finance]`);
+          }
+          if (bloombergAllowed) {
+            responses.push(`### Bloomberg Analysis: Starlink Spin-Off Eyed for Potential 2026 Listing\nSpaceX satellite unit Starlink is achieving positive free cash flow. Wall Street analysts suggest a Starlink spin-off and IPO could unlock significant value, potentially valuing the satellite division at $80 billion independently. Elon Musk has noted that Starlink will only IPO once cash flow becomes highly predictable. [Source: Bloomberg]`);
+          }
+          if (reutersAllowed) {
+            responses.push(`### SpaceX Prepares Tender Offer at Record Valuation, IPO Deferred\nReuters sources indicate SpaceX has no active plans for a parent-company IPO in 2026, citing Elon Musk's long-term goal of keeping control to fund colonization of Mars. However, discussions about a Starlink public debut remain on the table depending on regulatory approvals and launch cadence of the Starship fleet. [Source: Reuters]`);
+          }
+          mockResponse = responses.join('\n\n');
+        }
+      } else if (normalizedMsg.includes("navigate") || normalizedMsg.includes("go to portfolios")) {
+        if (state.aiSettings && state.aiSettings.accessMode === 'read-only') {
+          mockResponse = `🔒 **Read-Only Mode Active**: All writing actions and navigation are blocked by your AI Settings guardrail. Navigation is unavailable.`;
+        } else {
+          mockResponse = `### Navigation Assistant
+I will redirect you to the Portfolios view now.
+
+Redirecting to [Portfolios](/accounts/portfolios)...`;
+          setTimeout(() => {
+            if (typeof routeTo === 'function') {
+              routeTo('/accounts/portfolios');
+            }
+          }, 1500);
+        }
+      }
+    }
+
+    if (mockResponse) {
+      // Apply post-processing
+      const finalMockResponse = postprocessResponse(mockResponse, message);
+
+      let provenance = {
+        agentName: agent.name,
+        agentId: agent.id,
+        latency: (Math.random() * 0.4 + 0.3).toFixed(1),
+        sources: ['E*TRADE Connected API', 'Internal Portfolio Database'],
+        memoryRef: ''
+      };
+
+      if (isAiAnalyzerQuery) {
+        provenance = {
+          agentName: 'Portfolio Analyst',
+          agentId: 'portfolio-analyst',
+          latency: '1.4',
+          sources: ['E*TRADE Connected API', 'Internal Portfolio Database', 'Firm Asset Models'],
+          memoryRef: 'References May 28 NVDA Trim Decision and June 2 Asset Policy updates.'
+        };
+      } else if (normalizedMsg.includes("comprehensive risk analysis") || normalizedMsg.includes("run active risk analysis") || (normalizedMsg.includes("risk") && normalizedMsg.includes("analysis")) || normalizedMsg.includes("rebalance my portfolio") || normalizedMsg.includes("rebalance")) {
+        provenance = {
+          agentName: 'Portfolio Analyst',
+          agentId: 'portfolio-analyst',
+          latency: '1.1',
+          sources: ['E*TRADE Connected API', 'SEC Edgar Whitelist', 'Compliance Diagnostic Rules'],
+          memoryRef: 'References decision on May 28 to maintain high technology exposure.'
+        };
+      } else if (normalizedMsg.includes("retirement") || normalizedMsg.includes("monte carlo") || normalizedMsg.includes("glide path") || normalizedMsg.includes("planning & retirement")) {
+        provenance = {
+          agentName: 'Retirement Guide',
+          agentId: 'retirement-guide',
+          latency: '1.3',
+          sources: ['E*TRADE Connected API', 'Monte Carlo Simulator Engine', 'IRC Section 401(k) Guidelines'],
+          memoryRef: 'References May 12 Goal Planning session.'
+        };
+      } else if (normalizedMsg.includes("tax loss") || normalizedMsg.includes("tax-loss") || normalizedMsg.includes("harvesting") || normalizedMsg.includes("tax harvest")) {
+        provenance = {
+          agentName: 'Tax Specialist',
+          agentId: 'tax-specialist',
+          latency: '1.0',
+          sources: ['E*TRADE Connected API', 'IRC Wash Sale Guidelines', 'Internal Portfolio Database'],
+          memoryRef: 'References May 24 Tax Profile Update.'
+        };
+      } else if (normalizedMsg.includes("refinance") && (normalizedMsg.includes("rebalance") || normalizedMsg.includes("proceeds") || normalizedMsg.includes("refi"))) {
+        provenance = {
+          agentName: 'Wealth Orchestrator (Multi-Agent Flow)',
+          agentId: 'orchestrator',
+          latency: '1.9',
+          sources: ['Morgan Stanley Home Loans API', 'E*TRADE Connected API', 'Compliance Diagnostic Rules'],
+          memoryRef: 'References May 18 Refinance Inquiry and June 2 Asset Policy updates.'
+        };
+      } else if (normalizedMsg.includes("test pii scrubber")) {
+        provenance = {
+          agentName: 'Safety Guardrail (PII Scrubber Node)',
+          agentId: 'safety-guardrail',
+          latency: '0.15',
+          sources: ['GEAP Local Ruleset', 'Firm Security Policy'],
+          memoryRef: ''
+        };
+      } else if (normalizedMsg.includes("withdraw") || normalizedMsg.includes("transfer")) {
+        const accountId = state.selectedAccountId || 'core';
+        const accountsList = (typeof mockData !== 'undefined' && mockData.accounts) ? mockData.accounts : [];
+        const activeAccount = accountsList.find(a => a.id === accountId);
+        const accountType = activeAccount ? activeAccount.type : 'Brokerage';
+        
+        if (accountType === 'Custodial') {
+          provenance = {
+            agentName: 'Compliance Auditor (Custodial Guardrail)',
+            agentId: 'compliance-auditor',
+            latency: '0.95',
+            sources: ['Uniform Transfers to Minors Act (UTMA) SEC. 9', 'IRC Section 7511', 'Morgan Stanley Trust Policy'],
+            memoryRef: 'Redundant safety lock activated due to minor beneficiary account type.'
+          };
+        } else if (accountType === 'Bank') {
+          provenance = {
+            agentName: 'Private Bank Assistant',
+            agentId: 'bank-assistant',
+            latency: '0.65',
+            sources: ['Private Bank Direct Deposit Guidelines', 'ACH Settlement Rules'],
+            memoryRef: ''
+          };
+        } else {
+          provenance = {
+            agentName: 'Brokerage Assistant',
+            agentId: 'brokerage-assistant',
+            latency: '0.8',
+            sources: ['SEC Settlement Rule T+1', 'Margin Agreement Disclosures'],
+            memoryRef: ''
+          };
+        }
+      } else if (normalizedMsg.includes("wire") || normalizedMsg.includes("large transfer") || normalizedMsg.includes("withdraw 10000") || normalizedMsg.includes("withdraw $10000")) {
+        provenance = {
+          agentName: 'Customer Support (Escalation Node)',
+          agentId: 'customer-support',
+          latency: '0.6',
+          sources: ['Morgan Stanley Security Policy', 'Wire Desk API', 'Human Handoff Protocols'],
+          memoryRef: 'Triggered human-in-the-loop override due to high-risk wire request.'
+        };
+      } else if (normalizedMsg.includes("briefing")) {
+        provenance = {
+          agentName: 'Portfolio Analyst',
+          agentId: 'portfolio-analyst',
+          latency: '0.8',
+          sources: ['E*TRADE Connected API', 'Compliance Diagnostic Rules'],
+          memoryRef: 'References your preference on June 2 to monitor MSFT concentration.'
+        };
+      } else if (normalizedMsg.includes("explain my portfolio") || normalizedMsg.includes("diversified") || normalizedMsg.includes("portfolio explanation")) {
+        provenance = {
+          agentName: 'Portfolio Analyst',
+          agentId: 'portfolio-analyst',
+          latency: '0.8',
+          sources: ['E*TRADE Connected API', 'Bloomberg RSS'],
+          memoryRef: 'References your decision on May 28 to reject NVDA trim.'
+        };
+      }
+
+      setTimeout(() => {
+        if (typingEl) typingEl.remove();
+        addMessageToUI('assistant', finalMockResponse, agent.icon, provenance);
+        speakResponse(finalMockResponse);
+        conversationHistory.push({ role: 'model', parts: [{ text: finalMockResponse }] });
+
+        if (state.governance?.audit !== false) {
+          BrokerageData.logAgentActivity({
+            agent: provenance.agentName,
+            agentId: provenance.agentId,
+            query: scrubPiiForAudit(message).substring(0, 80),
+            status: 'success',
+            latency: provenance.latency,
+          });
+        }
+
+        isStreaming = false;
+      }, 1000);
+      return;
+    }
+
+    try {
+      let response;
+
+      if ((state.aiSettings?.assistantMode || 'geap') === 'geap') {
+        // ── GEAP Hosted Agent (routed via server.js, never touches Gemini directly) ──
+        const geapRes = await fetch('/api/geap/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: message })
+        });
+
+        if (!geapRes.ok) {
+          const errData = await geapRes.json().catch(() => ({}));
+          throw new Error(errData.error || 'Failed to reach GEAP agent');
+        }
+
+        // server.js relays the agent's reply as Server-Sent Events as each
+        // text delta arrives, instead of one buffered response at the end --
+        // update the typing bubble live instead of waiting for the whole
+        // (potentially long, multi-agent) turn to finish.
+        let assembledText = '';
+        let widgetSentinel = '';
+        const reader = geapRes.body.getReader();
         const decoder = new TextDecoder('utf-8');
-        let buffer = '';
+        let sseBuffer = '';
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          buffer += decoder.decode(value, { stream: true });
+          sseBuffer += decoder.decode(value, { stream: true });
 
-          // Parse SSE frames separated by \n\n (or \r\n\r\n)
-          const frames = buffer.split(/\r?\n\r?\n/);
-          buffer = frames.pop() || "";
+          let boundary;
+          while ((boundary = sseBuffer.indexOf('\n\n')) !== -1) {
+            const rawEvent = sseBuffer.slice(0, boundary);
+            sseBuffer = sseBuffer.slice(boundary + 2);
+            if (!rawEvent.startsWith('data: ')) continue;
 
-          for (const frame of frames) {
-            if (!frame.trim() || frame.startsWith(':')) continue;
-            const dataMatch = frame.match(/^data: (.+)$/m);
-            if (!dataMatch) continue;
-            let dataStr = dataMatch[1].trim();
-            let event;
+            let payload;
             try {
-              event = JSON.parse(dataStr);
-            } catch (parseErr) {
-              console.warn('[Chat] Failed to parse SSE frame:', frame, parseErr);
+              payload = JSON.parse(rawEvent.slice(6));
+            } catch (e) {
               continue;
             }
-            if (event.delta) {
-              streamingText += event.delta;
-              let bubble = document.querySelector('.chat-streaming');
-              if (!bubble && !streamingBubbleCreated) {
-                streamingBubbleCreated = true;
-                const container = document.getElementById('chat-messages');
-                const div = document.createElement('div');
-                div.className = 'chat-message assistant chat-streaming';
-                div.innerHTML = '<div class="message-avatar">' + renderAvatar(currentAgentId, 'thinking') + '</div><div class="message-content"></div>';
-                container.appendChild(div);
-                bubble = div;
-              }
-              if (bubble) {
-                const contentDiv = bubble.querySelector('.message-content');
-                if (contentDiv) {
-                  contentDiv.innerHTML = GeapApp.renderMarkdown(streamingText + ' ▌');
-                }
+
+            if (payload.error) {
+              throw new Error(payload.error);
+            }
+            if (payload.delta) {
+              assembledText += payload.delta;
+              if (typingEl) {
+                const contentEl = typingEl.querySelector('.message-content');
+                if (contentEl) contentEl.innerHTML = GeapApp.renderMarkdown(assembledText);
                 scrollToBottom();
               }
-            } else if (event.done) {
-              widgetSignal = event.widget || '';
-            } else if (event.error) {
-              throw new Error(event.error);
+            }
+            if (payload.done) {
+              widgetSentinel = payload.widget || '';
             }
           }
         }
-      })
-      .then(() => {
-        // onDone — finalize response
-        if (typingEl) typingEl.remove();
-        const finalResponse = postprocessResponse(streamingText || (widgetSignal ? `[[WIDGET:${widgetSignal}]]` : ''), message);
-        const bubble = document.querySelector('.chat-streaming');
-        if (bubble) bubble.remove();
-        addMessageToUI('assistant', finalResponse, '🤖');
-        speakResponse(finalResponse);
-        conversationHistory.push({ role: 'model', parts: [{ text: finalResponse }] });
 
-        if (state.governance?.audit !== false) {
-          BrokerageData.logAgentActivity({
-            agent: agent.name,
-            agentId: agent.id,
-            query: scrubPiiForAudit(message).substring(0, 80),
-            status: 'success',
-            latency: '0',
-          });
-        }
-        isStreaming = false;
-      })
-      .catch((errorMsg) => {
-        // onError — show error in chat
-        if (typingEl) typingEl.remove();
-        const bubble = document.querySelector('.chat-streaming');
-        if (bubble) bubble.remove();
-        addMessageToUI('assistant', '⚠️ ' + errorMsg.message || errorMsg, '⚠️');
-        speakResponse(errorMsg.message || errorMsg);
-        if (state.governance?.audit !== false) {
-          BrokerageData.logAgentActivity({
-            agent: agent.name,
-            agentId: agent.id,
-            query: scrubPiiForAudit(message).substring(0, 80),
-            status: 'error',
-            latency: '0',
-          });
-        }
-        isStreaming = false;
-      });
+        response = widgetSentinel ? `${assembledText}\n\n${widgetSentinel}` : assembledText;
+      } else {
+        // ── Public Gemini (direct from the browser, requires a user-supplied API key) ──
+        let contextData = '';
 
+        // Get consistent unified context
+        const contextPayload = ContextEngine.getContextPayload(agent.id);
+        contextData += ContextEngine.formatContextToMarkdown(contextPayload);
 
+        // Add agent-specific tool data
+        agent.tools.forEach(toolName => {
+          contextData += '\n\n' + AgentManager.callTool(toolName);
+        });
+
+        const systemPromptWithData = agent.systemPrompt +
+          '\n\nIMPORTANT: You are aware of which page the user is currently viewing in the E*TRADE platform. ' +
+          'Reference what they can see on screen when relevant. If they ask a vague question, use the page context to infer what they mean. ' +
+          'For example, if they are on the Portfolios page and ask "what does this mean?", they likely mean the allocation data visible on that page.' +
+          '\n\nCURRENT DATA (use this to answer the user\'s question):\n' + contextData;
+
+        // Filter tools based on agent config to sandbox tool usage
+        const agentTools = GeminiAPI.toolDeclarations.filter(t => agent.tools.includes(t.name));
+
+        response = await GeminiAPI.sendMessage(
+          conversationHistory,
+          systemPromptWithData,
+          agentTools
+        );
+      }
+
+      // Apply post-processing
+      const finalResponse = postprocessResponse(response, message);
+
+      if (typingEl) typingEl.remove();
+      addMessageToUI('assistant', finalResponse, agent.icon);
+      speakResponse(finalResponse);
+      conversationHistory.push({ role: 'model', parts: [{ text: finalResponse }] });
+
+      if (state.governance?.audit !== false) {
+        BrokerageData.logAgentActivity({
+          agent: agent.name,
+          agentId: agent.id,
+          query: scrubPiiForAudit(message).substring(0, 80),
+          status: 'success',
+          latency: (Math.random() * 2 + 0.5).toFixed(1),
+        });
+      }
+
+    } catch (error) {
+      if (typingEl) typingEl.remove();
+      const errMsg = `I encountered an error: ${error.message}. Please try again.`;
+      addMessageToUI('assistant', errMsg, '⚠️');
+      speakResponse(errMsg);
+
+      if (state.governance?.audit !== false) {
+        BrokerageData.logAgentActivity({
+          agent: agent.name,
+          agentId: agent.id,
+          query: scrubPiiForAudit(message).substring(0, 80),
+          status: 'error',
+          latency: '0',
+        });
+      }
+    }
+
+    isStreaming = false;
 
     if (conversationHistory.length > 20) {
       conversationHistory = conversationHistory.slice(-16);

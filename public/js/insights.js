@@ -8,7 +8,8 @@ function isShowDataEnabledLocal() {
       (process.env && (process.env.NODE_ENV === "test" || process.env.PORT === "3099")) ||
       (process.argv && process.argv.some(arg => arg.includes('test')))
     ));
-  const isDemo = typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true");
+  const isDemo = (typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true")) ||
+    (typeof state !== "undefined" && state.aiSettings && state.aiSettings.demoMode);
   return isLive || isTest || isDemo;
 }
 

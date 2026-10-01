@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const path = require('path');
 
 // 1. Mock global environment and DOM
 global.state = {
@@ -46,7 +47,8 @@ global.document = {
         if (index > -1) {
           mockMessagesEl.messages.splice(index, 1);
         }
-      }
+      },
+      querySelector: () => ({ innerHTML: '' })
     };
     return el;
   }
@@ -84,7 +86,7 @@ global.GeminiAPI = {
 global.ContextEngine = {
   getContextPayload: () => ({
     platform: { route: '/accounts', time: '', theme: 'dark' },
-    user: { name: 'Ken L.', lastLogin: '' },
+    user: { name: 'Sree K.', lastLogin: '' },
     account: { selectedId: 'core', netValue: '$0.00', buyingPower: '$0.00' },
     security: { piiRedacted: true, safetyActive: true, disclaimersActive: true }
   }),
@@ -92,7 +94,7 @@ global.ContextEngine = {
 };
 
 // 2. Load and execute chat.js
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/chat.js', 'utf8');
+const code = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'chat.js'), 'utf8');
 eval(code + '\nglobal.Chat = Chat;');
 
 function resetState() {
@@ -273,5 +275,70 @@ test('Chat - Alert Triage Query Interception', async (t) => {
 
   // Restore the original getApiKey function
   GeapApp.getApiKey = originalGetApiKey;
+});
+
+test('Chat - GEAP mode routes generic queries through server.js, never Gemini directly', async (t) => {
+  resetState();
+  state.aiSettings = { assistantMode: 'geap' };
+
+  // Mock fetch for the API call; GeminiAPI.sendMessage would throw if called, proving it's bypassed.
+  // server.js relays the reply as SSE frames, so the mock response needs a
+  // streaming body (a reader yielding chunks), not a plain .json() response.
+  const originalFetch = global.fetch;
+  const originalGeminiSend = global.GeminiAPI.sendMessage;
+  global.fetch = async (url) => {
+    if (url === '/api/geap/query') {
+      const encoder = new TextEncoder();
+      const chunks = [
+        encoder.encode('data: {"delta":"Response from GEAP agent"}\n\n'),
+        encoder.encode('data: {"done":true,"widget":""}\n\n')
+      ];
+      let i = 0;
+      return {
+        ok: true,
+        body: {
+          getReader: () => ({
+            read: async () => {
+              if (i < chunks.length) {
+                return { done: false, value: chunks[i++] };
+              }
+              return { done: true, value: undefined };
+            }
+          })
+        }
+      };
+    }
+    return { ok: false };
+  };
+  global.GeminiAPI.sendMessage = async () => {
+    throw new Error('GeminiAPI.sendMessage should not be called in GEAP mode');
+  };
+
+  await Chat.sendMessage('what is my portfolio worth right now?');
+
+  const assistantMsg = mockMessagesEl.messages.find(m => m.className.includes('assistant'));
+  assert.ok(assistantMsg, 'Should have received assistant response');
+  assert.ok(assistantMsg.innerHTML.includes('Response from GEAP agent'), 'Should show response from GEAP agent');
+
+  global.fetch = originalFetch;
+  global.GeminiAPI.sendMessage = originalGeminiSend;
+});
+
+test('Chat - Gemini mode still calls GeminiAPI directly, never server.js', async (t) => {
+  resetState();
+  state.aiSettings = { assistantMode: 'gemini' };
+
+  const originalFetch = global.fetch;
+  global.fetch = async () => {
+    throw new Error('fetch should not be called in Gemini mode');
+  };
+
+  await Chat.sendMessage('what is my portfolio worth right now?');
+
+  const assistantMsg = mockMessagesEl.messages.find(m => m.className.includes('assistant'));
+  assert.ok(assistantMsg, 'Should have received assistant response');
+  assert.ok(assistantMsg.innerHTML.includes('Mocked live API response'), 'Should show response from GeminiAPI');
+
+  global.fetch = originalFetch;
 });
 

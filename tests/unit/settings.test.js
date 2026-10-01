@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const path = require('path');
 
 // 1. Mock globals
 global.state = {
@@ -18,6 +19,8 @@ global.state = {
     accessMode: 'read-write',
     tradeExecutionMode: 'execute',
     piiScrubbingEnabled: true,
+    assistantMode: 'geap',
+    demoMode: true,
   }
 };
 
@@ -50,17 +53,21 @@ global.fetch = async (url) => {
 };
 
 // 2. Load settings.js code
-const settingsCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/settings.js', 'utf8');
+const settingsCode = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'settings.js'), 'utf8');
 eval(settingsCode);
 
 // 3. Load agents.js code to get toolImplementations
-const agentsCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/agents.js', 'utf8');
+const agentsCode = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'agents.js'), 'utf8');
 eval(agentsCode + '\nglobal.AgentManager = AgentManager;');
 
 test('AI Settings - renderAISettings() UI Structure', (t) => {
   assert.ok(typeof renderAISettings === 'function', 'renderAISettings should be defined');
   const html = renderAISettings();
   assert.ok(html.includes('AI Settings &amp; Guardrails') || html.includes('AI Settings & Guardrails'), 'Should render page title');
+  assert.ok(html.includes('Demo Data Mode'), 'Should render the demo data mode toggle');
+  assert.ok(html.includes('AI Backend Mode'), 'Should render the assistant mode toggle');
+  assert.ok(html.includes('GEAP Hosted Agent'), 'Should render the GEAP mode option');
+  assert.ok(html.includes('Public Gemini'), 'Should render the public Gemini mode option');
   assert.ok(html.includes('System Access Level'), 'Should render access levels');
   assert.ok(html.includes('Trade Execution Guardrails'), 'Should render trade guardrails');
   assert.ok(html.includes('Active PII Scrubbing'), 'Should render PII settings');

@@ -18,7 +18,8 @@ function isShowDataEnabledLocal() {
   const isTest = (typeof window !== "undefined" && window.__e2e_test_active__) || 
                  (typeof process !== "undefined" && process.env && (process.env.NODE_ENV === "test" || process.env.PORT === "3099")) ||
                  (typeof global !== "undefined" && (typeof global.it === "function" || typeof global.test === "function"));
-  const isDemo = typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true");
+  const isDemo = (typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true")) ||
+    (typeof state !== "undefined" && state.aiSettings && state.aiSettings.demoMode);
   return isLive || isTest || isDemo;
 }
 

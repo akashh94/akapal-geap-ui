@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const path = require('path');
 
 // 1. Mock state and mockData environment
 global.state = {
@@ -15,8 +16,8 @@ global.state = {
 
 global.mockData = {
   user: {
-    firstName: 'Ken',
-    lastName: 'L.',
+    firstName: 'Sree',
+    lastName: 'K.',
     lastLogin: 'June 8, 2026'
   },
   accounts: [
@@ -35,7 +36,7 @@ global.window = {
 };
 
 // 2. Load context.js
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/context.js', 'utf8');
+const code = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'context.js'), 'utf8');
 eval(code + '\nglobal.ContextEngine = ContextEngine;');
 
 test('ContextEngine - getContextPayload', (t) => {
@@ -43,7 +44,7 @@ test('ContextEngine - getContextPayload', (t) => {
   
   assert.strictEqual(payload.platform.route, '/pay-transfer');
   assert.strictEqual(payload.platform.theme, 'dark');
-  assert.strictEqual(payload.user.name, 'Ken L.');
+  assert.strictEqual(payload.user.name, 'Sree K.');
   assert.strictEqual(payload.user.lastLogin, 'June 8, 2026');
   assert.strictEqual(payload.account.selectedId, 'checking');
   assert.strictEqual(payload.account.netValue, '$1,200.00');
@@ -59,7 +60,7 @@ test('ContextEngine - formatContextToMarkdown', (t) => {
 
   assert.ok(markdown.includes('=== SYSTEM CONTEXT ==='));
   assert.ok(markdown.includes('Route**: /pay-transfer'));
-  assert.ok(markdown.includes('User**: Ken L.'));
+  assert.ok(markdown.includes('User**: Sree K.'));
   assert.ok(markdown.includes('Net Account Value**: $1,200.00'));
   assert.ok(markdown.includes('Buying Power**: $600.00'));
 });

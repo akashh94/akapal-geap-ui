@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const path = require('path');
 
 // Mock DOM and dependencies to satisfy evaluation of app.js
 const dummyElement = {
@@ -42,7 +43,7 @@ global.BrokerageData = {
 };
 
 // Load app.js
-const appCode = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/app.js', 'utf8');
+const appCode = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'app.js'), 'utf8');
 eval(appCode + `
   global.getState = () => state;
   global.getMockData = () => mockData;
@@ -94,4 +95,12 @@ test('App.js - Include External Accounts Toggle Logic', (t) => {
   // Reset state for safety
   state.includeExternalAccounts = false;
   global.window.__e2e_test_active__ = false;
+});
+
+test('App.js - Demo Data Mode defaults to true', (t) => {
+  const state = global.getState();
+
+  // demoMode should default to true so demo data shows without needing ?demo=true.
+  assert.strictEqual(state.aiSettings.demoMode, true, 'demoMode should default to true');
+  assert.strictEqual(global.isShowDataEnabled(), true, 'isShowDataEnabled should be true by default via demoMode setting');
 });

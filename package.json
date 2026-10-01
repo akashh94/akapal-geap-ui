@@ -6,9 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "dev:mcp": "python -m mcp_portfolio.app",
+    "dev": "node --watch server.js",
     "test": "node --test tests/unit/*.test.js tests/integration/*.test.js",
+    "test:python": "PYTHONPATH=. pytest tests/unit/test_agent.py",
     "test:e2e": "node tests/e2e/e2e.test.js",
     "test:all": "npm test && npm run test:e2e"
   },
@@ -18,7 +18,6 @@
     "dotenv": "^17.4.2",
     "express": "^4.19.2",
     "express-session": "^1.19.0",
-    "google-auth-library": "^11.0.0",
     "oauth-1.0a": "^2.2.6"
   },
   "engines": {

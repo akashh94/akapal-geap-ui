@@ -6,13 +6,6 @@
     <meta name="description" content="Internal GEAP proof-of-concept mock E*TRADE workspace.">
     <title>GEAP E*TRADE POC</title>
     <script>
-      /* The Node server (server.js) serves both the UI and the /api/geap/query
-         bridge to Vertex AI Agent Engine, so the agent is same-origin.
-         Empty string = same origin (no CORS needed). For a split deployment,
-         set this to the agent's Cloud Run URL instead. */
-      window.GEAP_AGENT_URL = "";
-    </script>
-    <script>
       window.loadedScripts = new Set();
       window.ensureScript = function(src, callback) {
         const cleanSrc = src.split('?')[0];
@@ -659,7 +652,7 @@ button {
     <script src="/js/charts.js?v=0.1.1" defer></script>
     <script src="/js/context.js?v=0.1.1" defer></script>
     <script src="/js/agents.js?v=0.1.1" defer></script>
-    <script src="/js/adk.js?v=0.1.1" defer></script>
-    <script src="/js/app.js?v=0.1.1" defer></script>
+    <script src="/js/gemini.js?v=0.1.1" defer></script>
+    <script src="/js/app.js?v=0.1.2" defer></script>
   </body>
 </html>

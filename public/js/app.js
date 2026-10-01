@@ -39,6 +39,8 @@ const state = {
       accessMode: 'read-write',
       tradeExecutionMode: 'execute',
       piiScrubbingEnabled: true,
+      assistantMode: 'geap',
+      demoMode: true,
     };
     try {
       if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.getItem === 'function') {
@@ -56,7 +58,7 @@ const state = {
 
 const mockData = {
   user: {
-    firstName: "Ken",
+    firstName: "Sree",
     lastLogin: "Jun 04, 2026, 8:07 PM ET",
     refreshedAt: "Jun 04, 2026, 10:19 PM ET"
   },
@@ -204,20 +206,19 @@ const originalMockData = JSON.parse(JSON.stringify(mockData));
 
 function isShowDataEnabled() {
   const isLive = typeof BrokerageData !== 'undefined' && BrokerageData.getLiveMode && BrokerageData.getLiveMode();
-  const backendReachable = typeof BrokerageData !== 'undefined' && BrokerageData.getBackendReachable && BrokerageData.getBackendReachable();
   const isTest = (typeof window !== "undefined" && window.__e2e_test_active__) ||
     (typeof process !== "undefined" && (
       (process.env && (process.env.NODE_ENV === "test" || process.env.PORT === "3099")) ||
       (process.argv && process.argv.some(arg => arg.includes('test')))
     ));
-  const isDemo = typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true");
-  return isLive || backendReachable || isTest || isDemo;
+  const isDemo = (typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true")) ||
+    (typeof state !== "undefined" && state.aiSettings && state.aiSettings.demoMode);
+  return isLive || isTest || isDemo;
 }
 window.isShowDataEnabled = isShowDataEnabled;
 
 function syncEtradeToMockData() {
   const isLive = typeof BrokerageData !== 'undefined' && BrokerageData.getLiveMode && BrokerageData.getLiveMode();
-  const backendReachable = typeof BrokerageData !== 'undefined' && BrokerageData.getBackendReachable && BrokerageData.getBackendReachable();
   if (isLive && BrokerageData.getLiveAccounts) {
     const liveAccounts = BrokerageData.getLiveAccounts();
     if (liveAccounts.length > 0) {
@@ -227,7 +228,7 @@ function syncEtradeToMockData() {
       }
 
       // 1. Determine first name from live accounts (prevent "MAIN" or "CORE" default text)
-      let firstName = "Ken";
+      let firstName = "Sree";
       if (liveAccounts[0].accountName) {
         const firstWord = liveAccounts[0].accountName.split(" ")[0];
         if (firstWord !== "MAIN" && firstWord !== "CORE" && firstWord !== "E*TRADE") {
@@ -303,10 +304,10 @@ function syncEtradeToMockData() {
     }
   } else {
     const isTest = (typeof window !== "undefined" && window.__e2e_test_active__) || (typeof process !== "undefined" && process.env && process.env.NODE_ENV === "test");
-    const isDemo = typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true");
+    const isDemo = (typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true")) ||
+      (typeof state !== "undefined" && state.aiSettings && state.aiSettings.demoMode);
 
-    if (backendReachable || isTest || isDemo) {
-      // Backend is up — show synthetic mock data
+    if (isTest || isDemo) {
       mockData.user = JSON.parse(JSON.stringify(originalMockData.user));
       mockData.totals = JSON.parse(JSON.stringify(originalMockData.totals));
       mockData.accounts = JSON.parse(JSON.stringify(originalMockData.accounts));
@@ -327,7 +328,7 @@ function syncEtradeToMockData() {
       }
     } else {
       mockData.user = {
-        firstName: "Ken",
+        firstName: "Sree",
         lastLogin: originalMockData.user.lastLogin,
         refreshedAt: originalMockData.user.refreshedAt
       };
@@ -1905,7 +1906,7 @@ window.triggerChatQuery = function (message, agentId = null) {
 
   if (typeof Chat === 'undefined') {
     if (typeof window !== 'undefined' && window.ensureScript && window.ensureStyle) {
-      window.ensureStyle('/css/chat.min.css?v=0.1.0');
+      window.ensureStyle('/css/chat.min.css?v=0.1.2');
       window.ensureScript('/js/chat.js?v=0.1.0', executeQuery);
     }
   } else {
@@ -1920,7 +1921,7 @@ chatLauncher.addEventListener("click", () => {
   if (isHidden) {
     if (typeof Chat === "undefined") {
       if (typeof window !== "undefined" && window.ensureScript && window.ensureStyle) {
-        window.ensureStyle("/css/chat.min.css?v=0.1.0");
+        window.ensureStyle("/css/chat.min.css?v=0.1.2");
         window.ensureScript("/js/chat.js?v=0.1.0", () => {
           if (typeof Chat !== "undefined") {
             Chat.init();
@@ -2006,7 +2007,7 @@ document.addEventListener("click", (event) => {
     const isHeaderLink = connectBtn.id === "etrade-logon-link";
     const connected = typeof BrokerageData !== "undefined" && BrokerageData.getLiveMode && BrokerageData.getLiveMode();
     if (connected) {
-      fetch(`${window.GEAP_AGENT_URL || ""}/api/etrade/disconnect`)
+      fetch("/api/etrade/disconnect")
         .then(res => res.json())
         .then(() => {
           if (typeof sessionStorage !== "undefined") {
@@ -2018,7 +2019,7 @@ document.addEventListener("click", (event) => {
       const pin = prompt("Please enter the verification code (PIN) shown on the E*TRADE authorization page:");
       if (pin && pin.trim()) {
         connectBtn.textContent = "Connecting...";
-        fetch(`${window.GEAP_AGENT_URL || ""}/auth/etrade/callback?pin=${encodeURIComponent(pin.trim())}`)
+        fetch(`/auth/etrade/callback?pin=${encodeURIComponent(pin.trim())}`)
           .then(res => {
             if (res.ok) {
               alert("SUCCESS: Connected to E*TRADE Sandbox!");
@@ -2048,7 +2049,7 @@ document.addEventListener("click", (event) => {
       const top = (window.screen.height / 2) - (height / 2);
 
       window.open(
-        `${window.GEAP_AGENT_URL || ""}/auth/etrade`,
+        "/auth/etrade",
         "EtradeAuth",
         `width=${width},height=${height},left=${left},top=${top},status=0,titlebar=0,menubar=0,toolbar=0`
       );
@@ -2075,12 +2076,12 @@ if (!isNode && typeof BrokerageData !== "undefined" && BrokerageData.checkEtrade
   BrokerageData.checkEtradeStatus().then(() => {
     updateEtradeUI();
     // Re-render if liveMode is active, or if we bypassed the initial render and must now show mock data
-    if ((BrokerageData.getLiveMode && BrokerageData.getLiveMode()) || BrokerageData.backendReachable || isEtradeConnectedSession) {
+    if ((BrokerageData.getLiveMode && BrokerageData.getLiveMode()) || isEtradeConnectedSession) {
       render();
     }
   }).catch((err) => {
     console.error("Error in checkEtradeStatus:", err);
-    if (BrokerageData.backendReachable || isEtradeConnectedSession) {
+    if (isEtradeConnectedSession) {
       render();
     }
   });
@@ -2137,8 +2138,16 @@ const GeapApp = {
 
   renderMarkdown(text) {
     if (!text) return "";
-
-    const inline = (str) => str
+    return String(text)
+      // headings: #### … down to # …
+      .replace(/^#####\s+(.*)$/gm, '<h5>$1</h5>')
+      .replace(/^####\s+(.*)$/gm, '<h4>$1</h4>')
+      .replace(/^###\s+(.*)$/gm, '<h3>$1</h3>')
+      .replace(/^##\s+(.*)$/gm, '<h2>$1</h2>')
+      .replace(/^#\s+(.*)$/gm, '<h1>$1</h1>')
+      // task-list checkboxes
+      .replace(/^\s*[-*]\s+\[ \]\s+(.*)$/gm, '<label class="markdown-task"><input type="checkbox" disabled> $1</label>')
+      .replace(/^\s*[-*]\s+\[x\]\s+(.*)$/gm, '<label class="markdown-task"><input type="checkbox" checked disabled> $1</label>')
       .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
       .replace(/\*(.*?)\*/g, "<em>$1</em>")
       .replace(/`(.*?)`/g, "<code>$1</code>")
@@ -2148,48 +2157,9 @@ const GeapApp = {
           return `<a href="${url}"${target}>${label}</a>`;
         }
         return `<a href="${url}" data-route>${label}</a>`;
-      });
-
-    const splitRow = (row) => row.trim()
-      .replace(/^\|/, "")
-      .replace(/\|$/, "")
-      .split("|")
-      .map((cell) => cell.trim());
-
-    const isSeparatorRow = (row) => {
-      if (!row.includes("|")) return false;
-      const cells = splitRow(row);
-      return cells.length > 0 && cells.every((cell) => /^:?-+:?$/.test(cell));
-    };
-
-    const lines = String(text).split("\n");
-    let html = "";
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-
-      if (line.includes("|") && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
-        const headers = splitRow(line);
-        const rows = [];
-        i += 2;
-        while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
-          rows.push(splitRow(lines[i]));
-          i++;
-        }
-        i--;
-
-        const head = headers.map((cell) => `<th>${inline(cell)}</th>`).join("");
-        const body = rows
-          .map((cells) => `<tr>${headers.map((_, c) => `<td>${inline(cells[c] || "")}</td>`).join("")}</tr>`)
-          .join("");
-        html += `<div class="table-wrap"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
-        continue;
-      }
-
-      html += inline(line).replace(/^- /, "• ") + "<br>";
-    }
-
-    return html.replace(/<br>$/, "");
+      })
+      .replace(/\n[-*] /g, "\n• ")
+      .replace(/\n/g, "<br>");
   }
 };
 

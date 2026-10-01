@@ -31,6 +31,47 @@ function renderAISettings() {
             <span>🔒</span> System Access & Guardrails
           </h2>
 
+          <!-- Demo Data Mode -->
+          <div class="settings-group">
+            <h3 class="settings-group-title">
+              <span>🧪</span> Demo Data Mode
+            </h3>
+            <div class="switch-row">
+              <div class="switch-row-info">
+                <span class="switch-row-title">Show Demo Portfolio Data</span>
+                <span class="switch-row-desc">Show pre-seeded demo portfolio, holdings, and account data whenever no live E*TRADE connection is active. Disable to show an empty/zeroed account instead.</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="settings-demo-mode" ${settings.demoMode ? 'checked' : ''}>
+                <span aria-hidden="true"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 0. AI Backend Mode -->
+          <div class="settings-group">
+            <h3 class="settings-group-title">
+              <span>🧠</span> AI Backend Mode
+            </h3>
+            <div class="settings-options-list">
+              <label class="radio-card ${(settings.assistantMode || 'geap') === 'geap' ? 'active' : ''}">
+                <input type="radio" name="assistantMode" value="geap" ${(settings.assistantMode || 'geap') === 'geap' ? 'checked' : ''}>
+                <div class="radio-card-content">
+                  <span class="radio-card-title">GEAP Hosted Agent (Recommended)</span>
+                  <span class="radio-card-desc">Chat is routed through the GEAP server to the hosted multi-agent system on Vertex AI. No API key required.</span>
+                </div>
+              </label>
+
+              <label class="radio-card ${settings.assistantMode === 'gemini' ? 'active' : ''}">
+                <input type="radio" name="assistantMode" value="gemini" ${settings.assistantMode === 'gemini' ? 'checked' : ''}>
+                <div class="radio-card-content">
+                  <span class="radio-card-title">Public Gemini (Direct / BYO Key)</span>
+                  <span class="radio-card-desc">The browser calls the public Gemini API directly using your own API key. Useful for testing outside the GEAP agent.</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <!-- 1. Access Mode -->
           <div class="settings-group">
             <h3 class="settings-group-title">
@@ -272,6 +313,31 @@ function bindAISettingsEvents() {
     if (!target) return;
 
     let changed = false;
+
+    // Demo Data Mode checkbox
+    if (target.id === "settings-demo-mode") {
+      state.aiSettings.demoMode = target.checked;
+      changed = true;
+      if (typeof render === "function") render();
+    }
+
+    // 0. AI Backend Mode Radios
+    if (target.name === "assistantMode") {
+      state.aiSettings.assistantMode = target.value;
+      changed = true;
+
+      // Update visual active classes
+      container.querySelectorAll('input[name="assistantMode"]').forEach(radio => {
+        const card = radio.closest('.radio-card');
+        if (card) {
+          if (radio.checked) {
+            card.classList.add('active');
+          } else {
+            card.classList.remove('active');
+          }
+        }
+      });
+    }
 
     // 1. Access Mode Radios
     if (target.name === "accessMode") {

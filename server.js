@@ -70,7 +70,7 @@ app.use(["/api", "/auth"], (req, res, next) => {
 });
 
 // Startup CSS Minification
-const cssDir = path.join(__dirname, "css");
+const cssDir = path.join(__dirname, "public", "css");
 if (fs.existsSync(cssDir)) {
   const cssFiles = fs.readdirSync(cssDir).filter(f => f.endsWith(".css") && !f.endsWith(".min.css"));
   cssFiles.forEach(file => {
@@ -92,7 +92,7 @@ if (fs.existsSync(cssDir)) {
 }
 
 const port = Number(process.env.PORT || 3000);
-const publicDir = __dirname;
+const publicDir = path.join(__dirname, "public");
 
 app.disable("x-powered-by");
 
@@ -430,7 +430,7 @@ app.get("/api/etrade/transactions/:accountIdKey", async (req, res) => {
 // Override via env vars for other targets; these defaults match the current deployment.
 const GEAP_ENGINE_PROJECT = process.env.GEAP_ENGINE_PROJECT || "labs-gcp-msls-16495-1782829337";
 const GEAP_ENGINE_LOCATION = process.env.GEAP_ENGINE_LOCATION || "us-east1";
-const GEAP_ENGINE_ID = process.env.GEAP_ENGINE_ID || "1675708497288757248";
+const GEAP_ENGINE_ID = process.env.GEAP_ENGINE_ID || "2898928377329090560";
 
 // The ADK AdkApp wrapper only registers "stream_query" / "async_stream_query" for
 // actually running the agent (see register_operations() in the ADK SDK) -- there is

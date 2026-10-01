@@ -338,47 +338,52 @@ const BrokerageData = (() => {
   // ── Live E*TRADE Mode State ──
   let liveMode = false;
   let connectionEnv = "sandbox";
-  let backendReachable = false;   // backend API is running (even without E*TRADE)
   let liveAccounts = [];
 
   async function checkEtradeStatus() {
-    // The UI is fully self-contained with mock data. E*TRADE endpoints
-    // are not served by the agent backend — a future MCP E*TRADE server
-    // will provide real data to the agent directly.
     try {
-      const res = await fetch(`${window.GEAP_AGENT_URL || ""}/api/etrade/status`);
+      const res = await fetch("/api/etrade/status");
       if (res.ok) {
         const status = await res.json();
         liveMode = status.connected;
         connectionEnv = status.env;
-        backendReachable = true;        // agent service is up → show mock data
-      } else {
-        // Stub not available — stay in mock mode with existing data
-        liveMode = false;
-        backendReachable = false;
+        if (liveMode) {
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.setItem("etrade_connected", "true");
+          }
+          await loadEtradeData();
+        } else {
+          if (typeof sessionStorage !== "undefined") {
+            sessionStorage.removeItem("etrade_connected");
+          }
+          liveAccounts = [];
+          
+          const isTest = (typeof window !== "undefined" && window.__e2e_test_active__);
+          const isDemo = (typeof window !== "undefined" && window.location && typeof window.location.search === "string" && window.location.search.includes("demo=true")) ||
+            (typeof state !== "undefined" && state.aiSettings && state.aiSettings.demoMode);
+          if (!isTest && !isDemo) {
+            holdings.length = 0;
+            transactions.length = 0;
+            Object.keys(sectorAllocation).forEach(k => delete sectorAllocation[k]);
+            account.cashBalance = 0;
+            account.buyingPower = 0;
+            account.totalValue = 0;
+            account.totalCost = 0;
+            account.totalReturn = 0;
+            account.totalReturnPercent = 0;
+            account.dayChange = 0;
+            account.dayChangePercent = 0;
+          }
+        }
       }
     } catch (err) {
-      // Backend not running or stubs removed — stay in mock mode
-      liveMode = false;
-      backendReachable = false;
-    }
-
-    if (liveMode) {
-      if (typeof sessionStorage !== "undefined") {
-        sessionStorage.setItem("etrade_connected", "true");
-      }
-      await loadEtradeData();
-    } else {
-      if (typeof sessionStorage !== "undefined") {
-        sessionStorage.removeItem("etrade_connected");
-      }
-      liveAccounts = [];
+      console.error("Failed to query E*TRADE connection status:", err);
     }
   }
 
   async function loadEtradeData() {
     try {
-      const accountsRes = await fetch(`${window.GEAP_AGENT_URL || ""}/api/etrade/accounts`);
+      const accountsRes = await fetch("/api/etrade/accounts");
       if (!accountsRes.ok) throw new Error("Failed to load E*TRADE accounts");
       const accountsData = await accountsRes.json();
       
@@ -394,7 +399,7 @@ const BrokerageData = (() => {
         let buyingPower = 0;
         let totalValue = 0;
         try {
-          const balancesRes = await fetch(`${window.GEAP_AGENT_URL || ""}/api/etrade/balances/${accountIdKey}`);
+          const balancesRes = await fetch(`/api/etrade/balances/${accountIdKey}`);
           if (balancesRes.ok) {
             const balancesData = await balancesRes.json();
             
@@ -453,7 +458,7 @@ const BrokerageData = (() => {
         // 2. Fetch Portfolio holdings
         const accountHoldings = [];
         try {
-          const portfolioRes = await fetch(`${window.GEAP_AGENT_URL || ""}/api/etrade/portfolio/${accountIdKey}`);
+          const portfolioRes = await fetch(`/api/etrade/portfolio/${accountIdKey}`);
           if (portfolioRes.ok) {
             const portfolioData = await portfolioRes.json();
             const accountPortfolios = portfolioData?.PortfolioResponse?.AccountPortfolio;
@@ -516,7 +521,7 @@ const BrokerageData = (() => {
         // 3. Fetch Transactions
         const accountTransactions = [];
         try {
-          const transRes = await fetch(`${window.GEAP_AGENT_URL || ""}/api/etrade/transactions/${accountIdKey}`);
+          const transRes = await fetch(`/api/etrade/transactions/${accountIdKey}`);
           if (transRes.ok) {
             const transData = await transRes.json();
             const rawTrans = transData?.TransactionListResponse?.Transaction;
@@ -701,7 +706,6 @@ const BrokerageData = (() => {
     getLiveMode() { return liveMode; },
     getConnectionEnv() { return connectionEnv; },
     getLiveAccounts() { return liveAccounts; },
-    getBackendReachable() { return backendReachable; },
     checkEtradeStatus,
     loadEtradeData,
     getSectorForSymbol,

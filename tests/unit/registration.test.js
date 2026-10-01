@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const path = require('path');
 
 // Mock global variables to satisfy load-time declarations
 global.window = {
@@ -21,7 +22,7 @@ global.BrokerageData = {
 };
 
 // Load and execute agents.js
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/agents.js', 'utf8');
+const code = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'agents.js'), 'utf8');
 eval(code + '\nglobal.AgentManager = AgentManager;');
 
 test('AgentManager - Dynamic Registration & Deregistration', (t) => {
@@ -33,7 +34,7 @@ test('AgentManager - Dynamic Registration & Deregistration', (t) => {
     icon: '💸',
     iconBg: 'purple',
     description: 'Helps with capital gains and tax-loss harvesting',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash',
     temperature: 0.5,
     tools: ['getPortfolioHoldings'],
     systemPrompt: 'You are a tax helper.'
@@ -66,7 +67,7 @@ test('AgentManager - Auto Routing for Dynamic Agents', (t) => {
     iconBg: 'purple',
     description: 'Helps with capital gains and tax-loss harvesting',
     keywords: ['tax-loss', 'harvesting', 'capital gains'],
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3.5-flash',
     temperature: 0.5,
     tools: ['getPortfolioHoldings'],
     systemPrompt: 'You are a tax helper.'

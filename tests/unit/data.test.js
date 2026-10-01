@@ -1,9 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const path = require('path');
 
 // Load data.js
-const code = fs.readFileSync('/Users/klejnieks/Graveyard/GEAP/public/js/data.js', 'utf8');
+const code = fs.readFileSync(path.resolve(__dirname, '..', '..', 'public', 'js', 'data.js'), 'utf8');
 eval(code + '\nglobal.BrokerageData = BrokerageData;');
 
 test('BrokerageData - Formatting Utilities', (t) => {

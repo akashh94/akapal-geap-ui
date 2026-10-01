@@ -12,7 +12,7 @@ const AgentManager = (() => {
       icon: '📈',
       iconBg: 'blue',
       description: 'Analyzes your portfolio allocation, risk, and performance',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.3,
       tools: ['getPortfolioHoldings', 'getAccountSummary', 'getSectorAllocation', 'navigateToPage', 'selectAccount', 'setAllocationMode', 'searchFinancialInfo'],
       systemPrompt: `You are an expert financial portfolio analyst for E*TRADE from Morgan Stanley, a retail self-directed brokerage platform. Your name is "Portfolio Analyst Agent."
@@ -46,7 +46,7 @@ PERSONALITY: Professional, analytical, confident but measured. Think of a senior
       icon: '⚡',
       iconBg: 'green',
       description: 'Helps you understand order types and execute trades',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.4,
       tools: ['getQuote', 'getPortfolioHoldings', 'getAccountSummary', 'getMarketSummary', 'navigateToPage', 'selectAccount', 'searchFinancialInfo'],
       systemPrompt: `You are a knowledgeable trading assistant for E*TRADE from Morgan Stanley. Your name is "Trade Assistant Agent."
@@ -81,7 +81,7 @@ PERSONALITY: Helpful, clear, safety-conscious. Like a patient trading desk speci
       icon: '🔬',
       iconBg: 'purple',
       description: 'Provides stock analysis, market insights, and research',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.5,
       tools: ['getQuote', 'getMarketSummary', 'getPortfolioHoldings', 'navigateToPage', 'searchFinancialInfo'],
       systemPrompt: `You are a financial research analyst for E*TRADE from Morgan Stanley. Your name is "Market Research Agent."
@@ -116,7 +116,7 @@ PERSONALITY: Knowledgeable, analytical, educational. Like a senior equity resear
       icon: '💬',
       iconBg: 'amber',
       description: 'Answers account questions and guides you through the platform',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.7,
       tools: ['getAccountSummary', 'getFAQ', 'navigateToPage', 'selectAccount', 'searchFinancialInfo'],
       systemPrompt: `You are a friendly customer support agent for E*TRADE from Morgan Stanley. Your name is "Support Agent."
@@ -152,7 +152,7 @@ PERSONALITY: Warm, patient, solution-oriented. Like the best customer service re
       icon: '🔬',
       iconBg: 'purple',
       description: 'Provides advanced market insights utilizing Morgan Stanley Research',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.5,
       tools: ['getQuote', 'getMarketSummary', 'getPortfolioHoldings', 'navigateToPage', 'searchFinancialInfo'],
       systemPrompt: `You are a financial research analyst for E*TRADE from Morgan Stanley. Your name is "Market Research Super Agent."
@@ -180,7 +180,7 @@ PERSONALITY: Highly analytical, authoritative, knowledgeable, yet accessible. Th
       icon: '🏠',
       iconBg: 'blue',
       description: 'Guides you through mortgage rates, home buying/selling decisions, and application pathways',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.5-flash',
       temperature: 0.5,
       tools: ['getAccountSummary', 'navigateToPage', 'searchFinancialInfo'],
       systemPrompt: `You are a Mortgage Specialist Agent for E*TRADE from Morgan Stanley. Your name is "Mortgage Agent."
